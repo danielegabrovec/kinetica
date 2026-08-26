@@ -1,0 +1,112 @@
+{
+  "name": "kinetica",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Simulatore locale di farmacocinetica ormonale e peptidica",
+  "author": {
+    "name": "Daniele Gabrovec",
+    "email": "info.dottdanielegabrovec@gmail.com",
+    "url": "https://github.com/danielegabrovec"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/danielegabrovec/kinetica",
+  "bugs": {
+    "url": "https://github.com/danielegabrovec/kinetica/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danielegabrovec/kinetica.git"
+  },
+  "keywords": [
+    "pharmacokinetics",
+    "simulation",
+    "hormones",
+    "peptides",
+    "electron",
+    "desktop",
+    "education"
+  ],
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dist": "npm run build && electron-builder --win nsis",
+    "dist:dir": "npm run build && electron-builder --win dir"
+  },
+  "dependencies": {
+    "echarts": "^5.6.0",
+    "echarts-for-react": "^3.0.2",
+    "lucide-react": "^0.511.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.0",
+    "electron": "^36.3.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^3.1.0",
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.4"
+  },
+  "build": {
+    "appId": "it.gabrovec.kinetica",
+    "productName": "Kinetica",
+    "copyright": "Copyright © 2026 Daniele Gabrovec",
+    "asar": true,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**"
+    ],
+    "extraMetadata": {
+      "main": "out/main/index.js"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Kinetica-Setup-${version}.${ext}",
+      "legalTrademarks": "Kinetica © 2026 Daniele Gabrovec",
+      "signAndEditExecutable": true,
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Kinetica",
+      "uninstallDisplayName": "Kinetica",
+      "installerLanguages": [
+        "it_IT",
+        "en_US"
+      ],
+      "language": "1040",
+      "license": "LICENSE",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "unicode": true
+    }
+  }
+}
