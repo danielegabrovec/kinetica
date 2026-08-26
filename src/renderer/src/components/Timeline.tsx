@@ -46,7 +46,7 @@ export function Timeline() {
 
   useEffect(() => {
     if (!menu) return
-    const close = (e: MouseEvent) => {
+    const close = (e: Event) => {
       const el = e.target as Element | null
       if (el?.closest?.('.ctx-layer')) return
       setMenu(null)
@@ -223,7 +223,7 @@ function dragEdge(
   if (e.button !== 0) return
   e.preventDefault()
   e.stopPropagation()
-  const el = e.currentTarget
+  const el = e.currentTarget as HTMLElement
   el.setPointerCapture(e.pointerId)
   const lane = (el.parentElement?.parentElement as HTMLElement).getBoundingClientRect()
   const startX = e.clientX
@@ -266,7 +266,7 @@ function dragBody(
   if (e.button !== 0) return
   e.preventDefault()
   e.stopPropagation()
-  const el = e.currentTarget
+  const el = e.currentTarget as HTMLElement
   el.setPointerCapture(e.pointerId)
   const lane = (el.parentElement?.parentElement as HTMLElement).getBoundingClientRect()
   const x0 = e.clientX

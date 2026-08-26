@@ -74,8 +74,12 @@ ipcMain.handle('kinetica:load-library', async () => {
   const dir = await ensureDir()
   const file = join(dir, 'library.json')
   if (!existsSync(file)) return { simulations: [], patients: [], draft: null }
-  const raw = await readFile(file, 'utf8')
-  return JSON.parse(raw)
+  try {
+    const raw = await readFile(file, 'utf8')
+    return JSON.parse(raw)
+  } catch {
+    return { simulations: [], patients: [], draft: null }
+  }
 })
 
 ipcMain.handle('kinetica:save-library', async (_e, payload: unknown) => {
@@ -86,10 +90,11 @@ ipcMain.handle('kinetica:save-library', async (_e, payload: unknown) => {
 
 ipcMain.handle('kinetica:export-file', async (_e, opts: { defaultName: string; content: string; ext: string }) => {
   const win = BrowserWindow.getFocusedWindow()
-  const res = await dialog.showSaveDialog(win ?? undefined, {
+  const saveOpts = {
     defaultPath: opts.defaultName,
     filters: [{ name: opts.ext.toUpperCase(), extensions: [opts.ext.replace('.', '')] }]
-  })
+  }
+  const res = win ? await dialog.showSaveDialog(win, saveOpts) : await dialog.showSaveDialog(saveOpts)
   if (res.canceled || !res.filePath) return { ok: false }
   await writeFile(res.filePath, opts.content, 'utf8')
   return { ok: true, path: res.filePath }

@@ -1,5 +1,7 @@
 node_modules
 out
+.tsc
+*.tsbuildinfo
 dist
 release
 .DS_Store
