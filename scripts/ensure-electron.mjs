@@ -61,8 +61,20 @@ const destination = join(electronRoot, 'dist')
 await mkdir(destination, { recursive: true })
 const expanded = spawnSync(
   'powershell.exe',
-  ['-NoProfile', '-NonInteractive', '-Command', 'Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force', archive, destination],
-  { stdio: 'inherit' }
+  [
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    'Expand-Archive -LiteralPath $env:KINETICA_ELECTRON_ARCHIVE -DestinationPath $env:KINETICA_ELECTRON_DESTINATION -Force'
+  ],
+  {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      KINETICA_ELECTRON_ARCHIVE: archive,
+      KINETICA_ELECTRON_DESTINATION: destination
+    }
+  }
 )
 if (expanded.status !== 0 || !existsSync(executable)) throw new Error('Estrazione Electron non riuscita.')
 await writeFile(pathFile, 'electron.exe', 'utf8')
