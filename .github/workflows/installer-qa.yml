@@ -3,12 +3,13 @@ name: Installer QA
 on:
   workflow_dispatch:
     inputs:
-      release_tag:
-        description: Tag della release draft o pubblica da collaudare
+      release_run_id:
+        description: ID del workflow Release che ha prodotto l'installer
         required: true
-        default: v1.2.0
+        default: '33321226652'
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -25,15 +26,16 @@ jobs:
           cache: npm
       - name: Installa dipendenze bloccate
         run: npm ci
-      - name: Scarica l'installer della release
+      - name: Scarica l'installer prodotto dalla pipeline Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          KINETICA_RELEASE_TAG: ${{ inputs.release_tag }}
+          GH_REPO: ${{ github.repository }}
+          KINETICA_RELEASE_RUN_ID: ${{ inputs.release_run_id }}
         run: |
           $downloadDir = Join-Path $env:RUNNER_TEMP 'kinetica-release'
           New-Item -ItemType Directory -Path $downloadDir -Force | Out-Null
-          gh release download $env:KINETICA_RELEASE_TAG --pattern 'Kinetica-Setup-*.exe' --dir $downloadDir
+          gh run download $env:KINETICA_RELEASE_RUN_ID --name 'kinetica-windows-setup' --dir $downloadDir
           $installers = @(Get-ChildItem -LiteralPath $downloadDir -Filter 'Kinetica-Setup-*.exe')
           if ($installers.Count -ne 1) { throw "Atteso un installer, trovati $($installers.Count)." }
           "KINETICA_INSTALLER=$($installers[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
