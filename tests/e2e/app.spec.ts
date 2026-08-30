@@ -53,7 +53,9 @@ test.beforeEach(async () => {
   await mkdir(outputDir, { recursive: true })
   await launchApp()
   const accept = page.getByRole('button', { name: 'Ho capito, apri Kinetica' })
-  if (await accept.isVisible()) await accept.click()
+  await expect(accept).toBeVisible({ timeout: 10_000 })
+  await accept.click()
+  await expect(accept).toBeHidden()
 })
 
 test.afterEach(async () => {
