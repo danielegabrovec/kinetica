@@ -138,7 +138,7 @@ async function loadLibrary() {
   }
 }
 
-async function saveLibrary(payload: unknown) {
+async function persistLibrary(payload: unknown) {
   const parsed = parseLibraryPayload(payload)
   if (!parsed.ok || parsed.value.warnings.length) throw new Error(parsed.ok ? parsed.value.warnings.join(' ') : parsed.error)
   const data = JSON.stringify(parsed.value.payload, null, 2)
@@ -156,6 +156,17 @@ async function saveLibrary(payload: unknown) {
     throw error
   }
   return { ok: true, path: file }
+}
+
+let librarySaveQueue: Promise<void> = Promise.resolve()
+
+function saveLibrary(payload: unknown) {
+  const operation = librarySaveQueue.then(() => persistLibrary(payload))
+  librarySaveQueue = operation.then(
+    () => undefined,
+    () => undefined
+  )
+  return operation
 }
 
 async function createReportWindow(html: string): Promise<BrowserWindow> {

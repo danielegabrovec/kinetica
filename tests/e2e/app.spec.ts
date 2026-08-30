@@ -81,7 +81,15 @@ test('crea, salva, riapre, confronta ed esporta un piano isolato', async () => {
   await page.getByRole('button', { name: 'Salva profilo' }).click()
 
   await page.getByRole('button', { name: 'Salva', exact: true }).click()
-  await expect(page.getByRole('status')).toContainText('Salvato')
+  const libraryPath = join(sandboxDir, 'user-data', 'library.json')
+  await expect.poll(async () => {
+    try {
+      const library = JSON.parse(await readFile(libraryPath, 'utf8'))
+      return library.simulations.some((item: { name?: string }) => item.name === 'Piano E2E pubblicazione')
+    } catch {
+      return false
+    }
+  }).toBe(true)
 
   await page.getByRole('button', { name: 'File' }).click()
   await expect(page.getByText('Piano E2E pubblicazione', { exact: true })).toBeVisible()
@@ -159,7 +167,6 @@ test('crea, salva, riapre, confronta ed esporta un piano isolato', async () => {
   await copyFile(pdfPath, join(qaDir, 'kinetica-release-qa.pdf'))
   await page.screenshot({ path: join(qaDir, 'report-view.png'), fullPage: true })
 
-  const libraryPath = join(sandboxDir, 'user-data', 'library.json')
   await expect.poll(async () => JSON.parse(await readFile(libraryPath, 'utf8')).simulations.length).toBe(1)
   await app.close()
   await launchApp()
