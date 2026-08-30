@@ -1,0 +1,41 @@
+name: Installer QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag della release draft o pubblica da collaudare
+        required: true
+        default: v1.2.0
+
+permissions:
+  contents: read
+
+jobs:
+  packaged-application:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout dei test correnti
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Installa dipendenze bloccate
+        run: npm ci
+      - name: Scarica l'installer della release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KINETICA_RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          $downloadDir = Join-Path $env:RUNNER_TEMP 'kinetica-release'
+          New-Item -ItemType Directory -Path $downloadDir -Force | Out-Null
+          gh release download $env:KINETICA_RELEASE_TAG --pattern 'Kinetica-Setup-*.exe' --dir $downloadDir
+          $installers = @(Get-ChildItem -LiteralPath $downloadDir -Filter 'Kinetica-Setup-*.exe')
+          if ($installers.Count -ne 1) { throw "Atteso un installer, trovati $($installers.Count)." }
+          "KINETICA_INSTALLER=$($installers[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Installa, collauda e disinstalla il pacchetto reale
+        run: npm run smoke:installer -- "$env:KINETICA_INSTALLER"

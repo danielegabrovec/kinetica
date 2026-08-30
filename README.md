@@ -78,6 +78,7 @@ npm run dev
 | `npm run verify` | Typecheck, unit/integration, audit, build ed E2E |
 | `npm run build` | Bundle produzione in `out/` |
 | `npm run dist` | Bundle + installer NSIS in `release/` |
+| `npm run smoke:installer -- "C:\\percorso\\Kinetica-Setup-x.y.z.exe"` | Installa, collauda e disinstalla il pacchetto reale in area temporanea |
 | `npm run checksums` | Genera `release/SHA256SUMS.txt` |
 
 ## Come si usa

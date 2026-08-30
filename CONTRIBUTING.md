@@ -19,7 +19,7 @@ Grazie per l’interesse. Kinetica è un simulatore educativo/professionale, non
 
 ## Gate di rilascio
 
-`npm run verify` esegue typecheck, Vitest, audit delle dipendenze, build ed E2E sull’app Electron reale. `npm run dist` crea l’installer NSIS; `npm run checksums` genera il file di integrità. Non pubblicare un installer che non sia stato installato, avviato e disinstallato almeno una volta in una directory di collaudo.
+`npm run verify` esegue typecheck, Vitest, audit delle dipendenze, build ed E2E sull’app Electron reale. `npm run dist` crea l’installer NSIS; `npm run checksums` genera il file di integrità. `npm run smoke:installer -- "C:\\percorso\\Kinetica-Setup-x.y.z.exe"` installa il pacchetto in una directory temporanea, collauda avvio e persistenza, quindi verifica la disinstallazione completa. La pipeline di release esegue automaticamente anche questo gate sul pacchetto reale: non pubblicare un installer che non lo supera.
 
 ## Cosa non accettare
 

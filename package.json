@@ -37,6 +37,8 @@
     "test": "vitest run",
     "pretest:e2e": "npm run ensure:electron",
     "test:e2e": "npm run build && playwright test",
+    "smoke:installed": "node scripts/smoke-installed.mjs",
+    "smoke:installer": "powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-installer.ps1",
     "verify": "npm run typecheck && npm test && npm audit --audit-level=moderate && npm run test:e2e",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
