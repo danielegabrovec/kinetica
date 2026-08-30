@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { PRESETS, getFormulation } from '@shared/catalog'
+import { createDefaultPatient, DEFAULT_APP_SETTINGS } from '@shared/defaults'
+import { MAX_HORIZON_DAYS, MAX_PROTOCOL_LINES, MAX_SIM_CLUSTERS } from '@shared/library'
 import { DEFAULT_SIM_CLUSTER_ID, nextClusterStyle, normalizeSimClusters } from '@shared/sim-cluster'
 import type {
   AppSettings,
@@ -28,29 +30,40 @@ export type ViewId =
   | 'info'
   | 'report'
 
-const defaultSettings: AppSettings = {
-  unitMode: 'conventional',
-  theme: 'dark',
-  cvPercent: 30,
-  showEvidenceC: true,
-  showUncertainty: true,
-  showFreeHormone: false,
-  showEstimatedE2: false,
-  showRefMax: true,
-  showRefMin: true,
-  showRefAvg: true,
-  overlayClusters: true,
-  disclaimerAccepted: false
+function clamp(value: number, min: number, max: number, fallback = min): number {
+  return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback
 }
 
-const defaultPatient = (): PatientProfile => ({
-  id: 'local',
-  alias: 'Profilo locale',
-  sex: 'male',
-  weightKg: 70,
-  shbgNmol: 35,
-  albuminGdl: 4.3
-})
+function normalizeLinePatch(patch: Partial<ProtocolLine>): Partial<ProtocolLine> {
+  const next = { ...patch }
+  if (next.dose != null) next.dose = clamp(next.dose, 0, 100_000, 0)
+  if (next.durationDays != null) next.durationDays = clamp(next.durationDays, 0.25, MAX_HORIZON_DAYS, 0.25)
+  if (next.startOffsetDays != null) next.startOffsetDays = clamp(next.startOffsetDays, 0, MAX_HORIZON_DAYS, 0)
+  if (next.startHour != null) next.startHour = clamp(next.startHour, 0, 23, 0)
+  if (next.everyNDays != null) next.everyNDays = clamp(next.everyNDays, 0.25, MAX_HORIZON_DAYS, 1)
+  if (next.frontloadDose != null) next.frontloadDose = clamp(next.frontloadDose, 0, 100_000, 0)
+  if (next.cvOverride != null) next.cvOverride = clamp(next.cvOverride, 0, 100, 0)
+  if (next.scalePercent != null) next.scalePercent = clamp(next.scalePercent, -50, 80, 0)
+  if (next.weeklyDays) next.weeklyDays = [...new Set(next.weeklyDays.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b)
+  return next
+}
+
+function normalizePatientPatch(patch: Partial<PatientProfile>): Partial<PatientProfile> {
+  const next = { ...patch }
+  if (next.alias != null) next.alias = next.alias.slice(0, 80)
+  if (next.weightKg != null) next.weightKg = clamp(next.weightKg, 30, 300, 70)
+  if (next.age != null) next.age = clamp(next.age, 0, 120, 0)
+  if (next.shbgNmol != null) next.shbgNmol = clamp(next.shbgNmol, 0.1, 500, 35)
+  if (next.albuminGdl != null) next.albuminGdl = clamp(next.albuminGdl, 1, 7, 4.3)
+  if (next.notes != null) next.notes = next.notes.slice(0, 4_000)
+  return next
+}
+
+function upsertProfile(list: PatientProfile[], patient: PatientProfile): PatientProfile[] {
+  return list.some((p) => p.id === patient.id)
+    ? list.map((p) => p.id === patient.id ? patient : p)
+    : [...list, patient]
+}
 
 function presetLines(presetId = 'trt-enanthate-weekly', clusterId = DEFAULT_SIM_CLUSTER_ID): ProtocolLine[] {
   const p = PRESETS.find((x) => x.id === presetId) ?? PRESETS[0]
@@ -164,10 +177,10 @@ export const useApp = create<State>((set, get) => ({
   selectedLineId: initialLines[0]?.id ?? null,
   selectedSimClusterId: DEFAULT_SIM_CLUSTER_ID,
   horizonDays: 84,
-  patient: defaultPatient(),
-  patients: [defaultPatient()],
+  patient: createDefaultPatient(),
+  patients: [createDefaultPatient()],
   library: [],
-  settings: defaultSettings,
+  settings: DEFAULT_APP_SETTINGS,
   paletteOpen: false,
   dirty: false,
   ready: false,
@@ -178,7 +191,7 @@ export const useApp = create<State>((set, get) => ({
   setPalette: (paletteOpen) => set({ paletteOpen }),
   addFormulation: (formulationId, simClusterId) => {
     const f = getFormulation(formulationId)
-    if (!f) return
+    if (!f || get().lines.length >= MAX_PROTOCOL_LINES) return
     const s = get()
     const clusterId =
       simClusterId ??
@@ -222,7 +235,7 @@ export const useApp = create<State>((set, get) => ({
   },
   updateLine: (id, patch) =>
     set((s) => ({
-      lines: s.lines.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+      lines: s.lines.map((l) => (l.id === id ? { ...l, ...normalizeLinePatch(patch) } : l)),
       dirty: true
     })),
   removeLine: (id) =>
@@ -233,8 +246,8 @@ export const useApp = create<State>((set, get) => ({
     })),
   duplicateLine: (id, patch) => {
     const src = get().lines.find((l) => l.id === id)
-    if (!src) return
-    const copy = { ...src, id: uid(), ...patch }
+    if (!src || get().lines.length >= MAX_PROTOCOL_LINES) return
+    const copy = { ...src, id: uid(), ...normalizeLinePatch(patch ?? {}) }
     set((s) => ({
       lines: [...s.lines, copy],
       selectedLineId: copy.id,
@@ -281,6 +294,7 @@ export const useApp = create<State>((set, get) => ({
   },
   selectSimCluster: (id) => set({ selectedSimClusterId: id }),
   addSimCluster: () => {
+    if (get().simClusters.length >= MAX_SIM_CLUSTERS) return
     const id = uid()
     set((s) => ({
       simClusters: [...s.simClusters, { id, ...nextClusterStyle(s.simClusters) }],
@@ -341,9 +355,9 @@ export const useApp = create<State>((set, get) => ({
       view: 'simula'
     })
   },
-  setHorizon: (horizonDays) => set({ horizonDays, dirty: true }),
-  patchPatient: (patch) => set((s) => ({ patient: { ...s.patient, ...patch }, dirty: true })),
-  patchSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+  setHorizon: (horizonDays) => set({ horizonDays: clamp(horizonDays, 1, MAX_HORIZON_DAYS, 84), dirty: true }),
+  patchPatient: (patch) => set((s) => ({ patient: { ...s.patient, ...normalizePatientPatch(patch) }, dirty: true })),
+  patchSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch, ...(patch.cvPercent == null ? {} : { cvPercent: clamp(patch.cvPercent, 0, 100, 30) }) } })),
   acceptDisclaimer: () => set((s) => ({ settings: { ...s.settings, disclaimerAccepted: true } })),
   saveCurrent: () => {
     const s = get()
@@ -365,6 +379,7 @@ export const useApp = create<State>((set, get) => ({
               }
             : rec
         ),
+        patients: upsertProfile(s.patients, s.patient),
         dirty: false
       })
       return true
@@ -391,6 +406,7 @@ export const useApp = create<State>((set, get) => ({
     }
     set({
       library: [rec, ...s.library],
+      patients: upsertProfile(s.patients, s.patient),
       dirty: false,
       currentSimId: rec.id,
       currentName: rec.name
@@ -442,12 +458,16 @@ export const useApp = create<State>((set, get) => ({
     return copy.id
   },
   loadSimulation: (id) => {
-    const rec = get().library.find((x) => x.id === id)
+    const state = get()
+    const rec = state.library.find((x) => x.id === id)
     if (!rec) return
     const applied = applyProtocol(rec.lines, rec.simClusters)
+    const patient = rec.patientId ? state.patients.find((p) => p.id === rec.patientId) : undefined
     set({
       ...applied,
       horizonDays: rec.horizonDays,
+      ...(patient ? { patient } : {}),
+      settings: { ...state.settings, cvPercent: rec.cvPercent },
       selectedLineId: applied.lines[0]?.id ?? null,
       view: 'simula',
       dirty: false,
@@ -564,9 +584,13 @@ export const useApp = create<State>((set, get) => ({
   deletePatient: (id) =>
     set((s) => {
       const rest = s.patients.filter((x) => x.id !== id)
-      const patients = rest.length ? rest : [defaultPatient()]
+      const patients = rest.length ? rest : [createDefaultPatient()]
       const patient = s.patient.id === id ? patients[0]! : s.patient
-      return { patients, patient }
+      return {
+        patients,
+        patient,
+        library: s.library.map((rec) => rec.patientId === id ? { ...rec, patientId: undefined } : rec)
+      }
     }),
   hydrate: (data) =>
     set((s) => {

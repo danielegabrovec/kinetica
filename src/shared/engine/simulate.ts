@@ -1,5 +1,6 @@
 import { CLUSTER_COLOR } from '../catalog/clusters'
 import { FORMULATIONS, getFormulation } from '../catalog'
+import { MAX_HORIZON_DAYS, MAX_PROTOCOL_LINES } from '../library'
 import type {
   AnalyteSeries,
   AnalyteStats,
@@ -129,7 +130,7 @@ function stepSize(forms: Formulation[], horizonDays: number): number {
   }
   const maxPoints = 8000
   const minStep = horizonDays / maxPoints
-  return Math.min(0.125, Math.max(step, minStep))
+  return Math.max(step, minStep)
 }
 
 export function interpolate(points: SeriesPoint[], tDays: number): number {
@@ -156,9 +157,10 @@ export function simulate(opts: {
   cvPercent: number
   settings: Pick<AppSettings, 'showUncertainty' | 'showFreeHormone' | 'showEstimatedE2'>
 }): SimulationResult {
-  const horizon = Math.max(opts.horizonDays, 1)
+  const horizon = Math.min(MAX_HORIZON_DAYS, Math.max(Number.isFinite(opts.horizonDays) ? opts.horizonDays : 84, 1))
+  const safeLines = opts.lines.slice(0, MAX_PROTOCOL_LINES)
   const used: Formulation[] = []
-  for (const line of opts.lines) {
+  for (const line of safeLines) {
     if (!line.enabled) continue
     const f = getFormulation(line.formulationId)
     if (!f) continue
@@ -176,6 +178,8 @@ export function simulate(opts: {
   const groups: {
     line: ProtocolLine
     formulation: Formulation
+    parentFormulation: Formulation
+    parentEvents: DoseEvent[]
     events: DoseEvent[]
     kernel: Kernel
     ampScale: number
@@ -183,7 +187,7 @@ export function simulate(opts: {
 
   const blendCache = new Map<string, number>()
 
-  for (const line of opts.lines) {
+  for (const line of safeLines) {
     if (!line.enabled) continue
     const parent = getFormulation(line.formulationId)
     if (!parent) continue
@@ -193,10 +197,13 @@ export function simulate(opts: {
       if (!blendCache.has(key)) blendCache.set(key, blendAmplitude(parent, opts.patient.weightKg))
       ampScale = blendCache.get(key)!
     }
+    const parentEvents = expandDoses(line, parent, horizon)
     for (const part of expandLine(line, horizon)) {
       groups.push({
         line,
         formulation: part.formulation,
+        parentFormulation: parent,
+        parentEvents,
         events: part.events,
         kernel: kernelFor(part.formulation, opts.patient.weightKg),
         ampScale
@@ -232,14 +239,13 @@ export function simulate(opts: {
     const existing = lineValues.get(g.line.id)
     if (existing && existing.f.analyte === g.formulation.analyte) {
       for (let i = 0; i < n; i++) existing.values[i] += arr[i]
-      existing.events.push(...g.events)
     } else if (!existing) {
-      lineValues.set(g.line.id, { f: g.formulation, values: arr, events: g.events.slice() })
+      lineValues.set(g.line.id, { f: g.parentFormulation, values: arr, events: g.parentEvents.slice() })
     } else {
       lineValues.set(`${g.line.id}:${g.formulation.id}`, {
         f: g.formulation,
         values: arr,
-        events: g.events.slice()
+        events: g.parentEvents.slice()
       })
     }
 
@@ -317,7 +323,8 @@ export function simulate(opts: {
 
   const metrics: LineMetrics[] = []
   for (const [lineId, rec] of lineValues) {
-    const line = opts.lines.find((l) => l.id === lineId)
+    const baseLineId = lineId.split(':')[0]
+    const line = safeLines.find((l) => l.id === baseLineId)
     const points: SeriesPoint[] = times.map((t, i) => ({
       tDays: t,
       value: rec.values[i],
@@ -349,7 +356,11 @@ export function simulate(opts: {
     )
   }
 
-  const events: DoseEvent[] = groups.flatMap((g) => g.events)
+  const events: DoseEvent[] = safeLines.flatMap((line) => {
+    if (!line.enabled) return []
+    const formulation = getFormulation(line.formulationId)
+    return formulation ? expandDoses(line, formulation, horizon) : []
+  })
   events.sort((a, b) => a.tDays - b.tDays)
 
   const ssStartDays = horizon * 0.5

@@ -25,10 +25,9 @@ export function Toolbar() {
   const flash = useFileUi((s) => s.flash)
   const modal = useFileUi((s) => s.modal)
 
-  const doSave = () => {
+  const doSave = async () => {
     if (saveCurrent()) {
-      flushPersist()
-      flash('Salvato')
+      if (await flushPersist()) flash('Salvato')
       return
     }
     openSaveAs()
@@ -37,8 +36,7 @@ export function Toolbar() {
   const onNew = () => request(() => neu())
   const onLoad = () => request(() => openLoad())
   const onPrint = () => {
-    if (window.kinetica) void window.kinetica.print()
-    else window.print()
+    setView('report')
   }
 
   useEffect(() => {
@@ -49,7 +47,7 @@ export function Toolbar() {
       if (key === 's') {
         e.preventDefault()
         if (e.shiftKey) openSaveAs()
-        else doSave()
+        else void doSave()
       }
       if (key === 'o') {
         e.preventDefault()
@@ -66,29 +64,29 @@ export function Toolbar() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
-      <button className="tb-btn" onClick={onNew} title="Nuovo piano (Ctrl+N)">
-        <FilePlus size={15} strokeWidth={1.7} /> Nuovo
+      <button className="tb-btn" aria-label="Nuovo" onClick={onNew} title="Nuovo piano (Ctrl+N)">
+        <FilePlus size={15} strokeWidth={1.7} /> <span className="tb-label">Nuovo</span>
       </button>
-      <button className="tb-btn" onClick={doSave} title="Salva (Ctrl+S)">
-        <Save size={15} strokeWidth={1.7} /> Salva
+      <button className="tb-btn" aria-label="Salva" onClick={() => void doSave()} title="Salva (Ctrl+S)">
+        <Save size={15} strokeWidth={1.7} /> <span className="tb-label">Salva</span>
       </button>
-      <button className="tb-btn" onClick={() => openSaveAs()} title="Salva come nuovo piano (Ctrl+Shift+S)">
-        <Copy size={15} strokeWidth={1.7} /> Salva con nome
+      <button className="tb-btn" aria-label="Salva con nome" onClick={() => openSaveAs()} title="Salva come nuovo piano (Ctrl+Shift+S)">
+        <Copy size={15} strokeWidth={1.7} /> <span className="tb-label">Salva con nome</span>
       </button>
-      <button className="tb-btn" onClick={onLoad} title="Carica un piano (Ctrl+O)">
-        <FolderOpen size={15} strokeWidth={1.7} /> Carica
+      <button className="tb-btn" aria-label="Carica" onClick={onLoad} title="Carica un piano (Ctrl+O)">
+        <FolderOpen size={15} strokeWidth={1.7} /> <span className="tb-label">Carica</span>
       </button>
-      <button className="tb-btn" onClick={() => setView('report')} title="Report ed export">
-        <ScrollText size={15} strokeWidth={1.7} /> Report
+      <button className="tb-btn" aria-label="Report" onClick={() => setView('report')} title="Report ed export">
+        <ScrollText size={15} strokeWidth={1.7} /> <span className="tb-label">Report</span>
       </button>
-      <button className="tb-btn" onClick={onPrint} title="Stampa">
-        <Printer size={15} strokeWidth={1.7} /> Stampa
+      <button className="tb-btn" aria-label="Stampa" onClick={onPrint} title="Stampa">
+        <Printer size={15} strokeWidth={1.7} /> <span className="tb-label">Stampa</span>
       </button>
-      <button className="tb-btn" onClick={() => setView('report')} title="Esporta HTML / PDF / CSV">
-        <FileDown size={15} strokeWidth={1.7} /> Esporta
+      <button className="tb-btn" aria-label="Esporta" onClick={() => setView('report')} title="Esporta HTML / PDF / CSV">
+        <FileDown size={15} strokeWidth={1.7} /> <span className="tb-label">Esporta</span>
       </button>
-      <button className="tb-btn" onClick={() => setView('info')} title="Informazioni, autore e diritti">
-        <Info size={15} strokeWidth={1.7} /> Info
+      <button className="tb-btn" aria-label="Info" onClick={() => setView('info')} title="Informazioni, autore e diritti">
+        <Info size={15} strokeWidth={1.7} /> <span className="tb-label">Info</span>
       </button>
       {dirty ? <span className="hair">non salvato</span> : null}
       <FileModals />

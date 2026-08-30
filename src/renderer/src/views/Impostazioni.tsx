@@ -7,15 +7,16 @@ export function Impostazioni() {
     <section className="canvas" style={{ gridColumn: '2 / span 2', maxWidth: 560 }}>
       <h1 style={{ fontFamily: 'Source Serif 4', fontWeight: 600 }}>Impostazioni</h1>
       <div className="field" style={{ marginTop: 16 }}>
-        <label>Unità</label>
-        <select value={s.unitMode} onChange={(e) => patch({ unitMode: e.target.value as 'si' | 'conventional' })}>
+        <label htmlFor="settings-unit">Unità</label>
+        <select id="settings-unit" value={s.unitMode} onChange={(e) => patch({ unitMode: e.target.value as 'si' | 'conventional' })}>
           <option value="conventional">Convenzionali (ng/dL, pg/mL)</option>
           <option value="si">SI (nmol/L, pmol/L)</option>
         </select>
       </div>
       <div className="field">
-        <label>Incertezza CV%</label>
+        <label htmlFor="settings-cv">Incertezza CV%</label>
         <input
+          id="settings-cv"
           type="number"
           min={0}
           max={80}

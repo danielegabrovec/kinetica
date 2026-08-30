@@ -28,7 +28,7 @@ function rec(name: string, extra?: Partial<SavedSimulation>): SavedSimulation {
     horizonDays: 84,
     cvPercent: 30,
     lines: [line],
-    simClusters: [{ id: 'c1', color: '#f00', stroke: 'solid' }],
+    simClusters: [{ id: 'c1', color: '#ff0000', stroke: 'solid' }],
     ...extra
   }
 }

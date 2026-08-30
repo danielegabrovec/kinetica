@@ -1,5 +1,7 @@
+import packageJson from '../../../package.json'
+
 export const APP_NAME = 'Kinetica'
-export const APP_VERSION = '1.0.0'
+export const APP_VERSION = packageJson.version
 export const APP_YEAR = 2026
 
 export const ABOUT = {

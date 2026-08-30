@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.2.0 — 2026-08-30
+
+Release di stabilizzazione, sicurezza, qualità visiva e pubblicazione.
+
+### Affidabilità dei dati
+
+- Il piano salvato ripristina anche profilo, peso, SHBG e CV associati.
+- Salvataggi dell’archivio atomici con backup, migrazione del vecchio percorso e copia di recupero in caso di JSON corrotto.
+- Sincronizzazione della bozza prima della chiusura dell’app e blocco della seconda istanza.
+- Validazione rigorosa e limiti dimensionali per archivio e import JSON; gli schemi futuri sconosciuti vengono rifiutati senza sovrascrittura.
+
+### Motore e funzioni
+
+- Corretto il conteggio di Sustanon/Omnadren: una somministrazione non viene più moltiplicata per il numero di esteri del blend.
+- Aggiunti limiti a orizzonte, righe, cluster, griglia temporale ed eventi per evitare carichi incontrollati.
+- Corretto l’export JSON su Windows e uniformati i nomi file sicuri.
+
+### Report, UI e UX
+
+- HTML, PDF e stampa condividono ora un documento A4 dedicato, con header, riepilogo, grafico SVG, protocollo, metriche e appendice metodologica/fonti.
+- Corretti ritagli, unità duplicate, spazi vuoti e proporzioni del grafico nelle esportazioni.
+- Font locali, navigazione responsive, etichette accessibili, modali e notifiche semantiche, libreria molecole utilizzabile da tastiera.
+- Route caricate in modo differito: il grafico non appesantisce più il bundle iniziale.
+
+### Sicurezza e rilascio
+
+- Aggiornati Electron ed ECharts; audit dipendenze senza vulnerabilità note al rilascio.
+- Sandbox e context isolation, CSP restrittiva, IPC verificato, permessi negati e navigazione/link esterni consentiti solo quando previsti.
+- CI con typecheck, unit/integration, audit e Playwright sull’app Electron reale.
+- Release con installer, checksum SHA-256, GitHub artifact attestation e azioni bloccate a commit immutabili.
+
 ## 1.1.0 — 2026-08-30
 
 Cluster di confronto, gestione file completa e profili.

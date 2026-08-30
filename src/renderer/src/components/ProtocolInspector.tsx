@@ -107,6 +107,7 @@ export function ProtocolInspector() {
             <label>Dose ({f.doseUnit})</label>
             <input
               type="number"
+              aria-label={`Dose (${f.doseUnit})`}
               step="any"
               min={0}
               value={Number.isFinite(line.dose) ? line.dose : ''}
@@ -135,6 +136,7 @@ export function ProtocolInspector() {
           <div className="field">
             <label>Frequenza</label>
             <select
+              aria-label="Frequenza"
               value={line.frequencyId}
               onChange={(e) => update(line.id, { frequencyId: e.target.value })}
             >
@@ -150,6 +152,7 @@ export function ProtocolInspector() {
               <label>Ogni N giorni</label>
               <input
                 type="number"
+                aria-label="Ogni N giorni"
                 min={0.25}
                 step={0.5}
                 value={
@@ -193,6 +196,7 @@ export function ProtocolInspector() {
             <label>Durata (giorni, step 0,5)</label>
             <input
               type="number"
+              aria-label="Durata in giorni"
               min={0.5}
               step={0.5}
               value={line.durationDays}
@@ -203,6 +207,7 @@ export function ProtocolInspector() {
             <label>Inizio (giorni, step 0,5 — es. 3,5)</label>
             <input
               type="number"
+              aria-label="Inizio in giorni"
               min={0}
               step={0.5}
               value={line.startOffsetDays}
@@ -213,6 +218,7 @@ export function ProtocolInspector() {
             <label>Ora</label>
             <input
               type="number"
+              aria-label="Ora della dose"
               min={0}
               max={23}
               value={line.startHour}
@@ -223,6 +229,7 @@ export function ProtocolInspector() {
             <label>Front-load (prima dose, opzionale)</label>
             <input
               type="number"
+              aria-label="Front-load"
               placeholder="—"
               value={line.frontloadDose ?? ''}
               onChange={(e) =>
@@ -237,6 +244,7 @@ export function ProtocolInspector() {
             <label>Adattamento curva {scale ? `(${scale > 0 ? '+' : ''}${scale}%)` : '(modello)'}</label>
             <input
               type="range"
+              aria-label="Adattamento curva percentuale"
               min={-50}
               max={80}
               step={1}
@@ -246,6 +254,7 @@ export function ProtocolInspector() {
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <input
                 type="number"
+                aria-label="Adattamento curva percentuale"
                 step={1}
                 value={scale}
                 onChange={(e) =>

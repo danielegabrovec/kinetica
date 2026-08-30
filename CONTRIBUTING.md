@@ -10,11 +10,16 @@ Grazie per l’interesse. Kinetica è un simulatore educativo/professionale, non
 ## Codice
 
 1. Fork e branch da `main`.
-2. `npm install` → `npm test` → `npm run dev`.
+2. Usa Node.js 22 ed esegui `npm ci` → `npm run verify` → `npm run dev`.
 3. Motore PK: solo `src/shared/engine` + test in `tests/`. Ogni cambiamento di cinetica vuole un test.
 4. Parametri di letteratura: `src/shared/catalog/formulations.ts` (non hard-codare nel solver).
 5. UI in italiano. Non aggiungere telemetria né chiamate di rete obbligatorie.
-6. PR con descrizione in italiano o inglese, e `npm test` verde.
+6. Se tocchi salvataggi/import, aggiungi test di schema e recupero; se tocchi UI/export, aggiungi o aggiorna un E2E in `tests/e2e/` e ispeziona il PDF prodotto.
+7. PR con descrizione in italiano o inglese e `npm run verify` verde.
+
+## Gate di rilascio
+
+`npm run verify` esegue typecheck, Vitest, audit delle dipendenze, build ed E2E sull’app Electron reale. `npm run dist` crea l’installer NSIS; `npm run checksums` genera il file di integrità. Non pubblicare un installer che non sia stato installato, avviato e disinstallato almeno una volta in una directory di collaudo.
 
 ## Cosa non accettare
 

@@ -46,7 +46,7 @@ export function CommandPalette() {
 
   return createPortal(
     <div className="overlay" onClick={() => setPalette(false)}>
-      <div className="palette" onClick={(e) => e.stopPropagation()}>
+      <div className="palette" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Aggiungi formulazione">
         <input
           autoFocus
           placeholder="Cerca composto, estere, brand…"

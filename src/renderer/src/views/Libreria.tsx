@@ -29,22 +29,29 @@ export function Libreria() {
   }, [library, q])
 
   const onImport = async () => {
-    const content = await pickPlanFile()
-    if (!content) return
-    const res = ingest(content)
-    if (!res.ok) {
-      flash(res.error, 'err')
-      return
+    try {
+      const content = await pickPlanFile()
+      if (!content) return
+      const res = ingest(content)
+      if (!res.ok) {
+        flash(res.error, 'err')
+        return
+      }
+      if (await flushPersist()) flash('Piano importato')
+    } catch (error) {
+      flash(error instanceof Error ? error.message : 'Importazione non riuscita.', 'err')
     }
-    flushPersist()
-    flash('Piano importato')
   }
 
   const onExportCurrent = async () => {
     const payload = exportOf()
     if (!payload) return
-    const res = await exportPlanToDisk(payload.plan, payload.patient)
-    if (res.ok) flash('Piano esportato')
+    try {
+      const res = await exportPlanToDisk(payload.plan, payload.patient)
+      if (res.ok) flash('Piano esportato')
+    } catch (error) {
+      flash(error instanceof Error ? error.message : 'Esportazione non riuscita.', 'err')
+    }
   }
 
   return (

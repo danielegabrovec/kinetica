@@ -19,7 +19,7 @@ export function FileModals() {
       {modal === 'unsaved' ? <UnsavedDialog /> : null}
       {modal === 'save-as' ? <SaveAsDialog /> : null}
       {modal === 'load' ? <LoadDialog /> : null}
-      {toast ? <div className={`file-toast ${toastKind === 'err' ? 'err' : ''}`}>{toast}</div> : null}
+      {toast ? <div className={`file-toast ${toastKind === 'err' ? 'err' : ''}`} role={toastKind === 'err' ? 'alert' : 'status'} aria-live="polite">{toast}</div> : null}
     </>,
     document.body
   )
@@ -49,7 +49,7 @@ function UnsavedDialog() {
 
   return (
     <div className="overlay" onClick={close}>
-      <div className="file-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-labelledby="unsaved-title">
+      <div className="file-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="unsaved-title">
         <div className="hair">Piano non salvato</div>
         <h2 id="unsaved-title" className="file-dialog-title">
           {name ?? 'Senza titolo'}
@@ -59,15 +59,16 @@ function UnsavedDialog() {
           <button
             type="button"
             className="primary"
-            onClick={() => {
+            onClick={() => void (async () => {
               if (saveCurrent()) {
-                flushPersist()
-                flash('Salvato')
-                proceed()
+                if (await flushPersist()) {
+                  flash('Salvato')
+                  proceed()
+                }
                 return
               }
               openSaveAs(then ?? undefined)
-            }}
+            })()}
           >
             Salva
           </button>
@@ -106,11 +107,11 @@ function SaveAsDialog() {
     return () => window.removeEventListener('keydown', onKey)
   }, [close])
 
-  const commit = () => {
+  const commit = async () => {
     const trimmed = name.trim()
     if (!trimmed) return
     saveAs(trimmed)
-    flushPersist()
+    if (!await flushPersist()) return
     flash('Salvato come nuovo piano')
     const fn = then
     close()
@@ -119,7 +120,7 @@ function SaveAsDialog() {
 
   return (
     <div className="overlay" onClick={close}>
-      <div className="file-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-labelledby="saveas-title">
+      <div className="file-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="saveas-title">
         <div className="hair">Salva con nome</div>
         <h2 id="saveas-title" className="file-dialog-title">
           Nuovo piano nella libreria locale
@@ -130,7 +131,7 @@ function SaveAsDialog() {
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            commit()
+            void commit()
           }}
         >
           <label className="field">
@@ -223,6 +224,7 @@ function LoadDialog() {
         className="file-dialog file-dialog-wide"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
+        aria-modal="true"
         aria-labelledby="load-title"
       >
         <div className="hair">Carica</div>

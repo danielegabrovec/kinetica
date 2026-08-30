@@ -6,7 +6,12 @@ contextBridge.exposeInMainWorld('kinetica', {
   exportFile: (opts: { defaultName: string; content: string; ext: string }) =>
     ipcRenderer.invoke('kinetica:export-file', opts),
   importFile: () => ipcRenderer.invoke('kinetica:import-file'),
-  print: () => ipcRenderer.invoke('kinetica:print'),
-  pdf: (defaultName: string) => ipcRenderer.invoke('kinetica:pdf', defaultName),
-  openPath: (p: string) => ipcRenderer.invoke('kinetica:open-path', p)
+  printReport: (html: string) => ipcRenderer.invoke('kinetica:print-report', html),
+  pdfReport: (opts: { defaultName: string; html: string }) => ipcRenderer.invoke('kinetica:pdf-report', opts),
+  onPrepareClose: (callback: () => void | Promise<void>) => {
+    const listener = () => void callback()
+    ipcRenderer.on('kinetica:prepare-close', listener)
+    return () => ipcRenderer.removeListener('kinetica:prepare-close', listener)
+  },
+  completeClose: (saved: boolean) => ipcRenderer.send('kinetica:close-ready', saved)
 })

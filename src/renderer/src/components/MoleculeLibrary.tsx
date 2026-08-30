@@ -103,10 +103,19 @@ export function MoleculeLibrary() {
           <div
             key={f.id}
             className="mol-item"
+            role="button"
+            tabIndex={0}
+            aria-label={`Aggiungi ${f.name} al cluster selezionato`}
             draggable
             onDragStart={(e) => dragMolecule(e, f.id)}
             onDragEnd={endMoleculeDrag}
             onDoubleClick={() => add(f.id)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                add(f.id)
+              }
+            }}
             title="Trascina in un cluster, o doppio clic per aggiungere al cluster selezionato"
           >
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

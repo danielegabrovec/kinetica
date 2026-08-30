@@ -10,7 +10,7 @@ export const THEORY_PAGES: { id: string; title: string; body: string }[] = [
     title: 'Come funziona il modello',
     body: `Kinetica non assume che il livello salga **istantaneamente** al picco. Per i depositi (esteri IM, molte SC) usa una curva di Bateman a due costanti:
 
-C(t) = A · (e^{−k_lenta t} − e^{−k_rapida t})
+\`C(t) = A × [exp(-k_lenta × t) - exp(-k_rapida × t)]\`
 
 - **k_lenta** viene dalla t½ apparente di letteratura (per gli esteri IM è l’assorbimento dal deposito, non l’eliminazione del T libero).
 - **k_rapida** è scelta in modo che il **Tmax** coincida con i dati.

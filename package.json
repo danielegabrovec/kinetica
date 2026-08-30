@@ -1,6 +1,6 @@
 {
   "name": "kinetica",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Simulatore locale di farmacocinetica ormonale e peptidica",
   "author": {
@@ -29,17 +29,28 @@
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
+    "ensure:electron": "node scripts/ensure-electron.mjs",
+    "predev": "npm run ensure:electron",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "test": "vitest run",
+    "pretest:e2e": "npm run ensure:electron",
+    "test:e2e": "npm run build && playwright test",
+    "verify": "npm run typecheck && npm test && npm audit --audit-level=moderate && npm run test:e2e",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
+    "predist": "npm run ensure:electron",
     "dist": "npm run build && electron-builder --win nsis --publish never",
+    "checksums": "node scripts/write-checksums.mjs",
+    "predist:dir": "npm run ensure:electron",
     "dist:dir": "npm run build && electron-builder --win dir --publish never"
   },
   "dependencies": {
-    "echarts": "^5.6.0",
+    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@fontsource-variable/source-serif-4": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.2",
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",
@@ -48,11 +59,13 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.1.8",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.5.0",
-    "electron": "^36.3.1",
+    "axe-core": "^4.13.0",
+    "electron": "^44.0.0",
     "electron-builder": "^26.15.3",
     "electron-vite": "^3.1.0",
     "tailwindcss": "^4.1.8",

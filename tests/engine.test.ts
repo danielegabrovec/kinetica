@@ -188,7 +188,10 @@ describe('simulate TRT', () => {
       settings
     })
     expect(res.series[0].points.some((p) => p.value > 100)).toBe(true)
-    expect(res.events.length).toBeGreaterThanOrEqual(4)
+    expect(res.events).toHaveLength(1)
+    expect(res.events[0]?.label).toBe('Sustanon 250')
+    expect(res.metrics[0]?.label).toBe('Sustanon 250')
+    expect(res.metrics[0]?.injections).toBe(1)
   })
 
   it('AUC scales with dose', () => {
