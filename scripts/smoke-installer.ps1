@@ -52,7 +52,7 @@ if ($registration.DisplayVersion -ne $expectedVersion -or $registration.QuietUni
 Invoke-QAProcess -FilePath $uninstaller -ArgumentList @('/currentuser', '/S') -Label 'Disinstallazione QA'
 
 $deadline = (Get-Date).AddSeconds(60)
-while ((Test-Path -LiteralPath $installDir) -and (Get-Date) -lt $deadline) {
+while (((Test-Path -LiteralPath $installDir) -or (Test-Path -LiteralPath $uninstallKey)) -and (Get-Date) -lt $deadline) {
   Start-Sleep -Milliseconds 500
 }
 if (Test-Path -LiteralPath $installDir) {
