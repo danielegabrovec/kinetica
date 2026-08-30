@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { CLUSTER_LABEL, CLUSTER_ORDER, searchFormulations } from '@shared/catalog'
+import { CLUSTER_LABEL, CLUSTER_ORDER, listFormulations } from '@shared/catalog'
 import type { ClusterId } from '@shared/types'
 import { useApp } from '../store/useApp'
 
@@ -13,12 +13,10 @@ export function CommandPalette() {
   const [cluster, setCluster] = useState<ClusterId | 'all'>('all')
   const [idx, setIdx] = useState(0)
 
-  const hits = useMemo(() => {
-    let list = searchFormulations(q)
-    if (cluster !== 'all') list = list.filter((f) => f.cluster === cluster)
-    if (!showC) list = list.filter((f) => f.evidence !== 'C')
-    return list.slice(0, 40)
-  }, [q, cluster, showC])
+  const hits = useMemo(
+    () => listFormulations({ q, cluster, showEvidenceC: showC }).slice(0, 40),
+    [q, cluster, showC]
+  )
 
   useEffect(() => setIdx(0), [q, cluster, open])
 
@@ -53,7 +51,11 @@ export function CommandPalette() {
           autoFocus
           placeholder="Cerca composto, estere, brand…"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value
+            setQ(v)
+            if (v.trim()) setCluster('all')
+          }}
         />
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '8px 12px' }}>
           <button className={`chip ${cluster === 'all' ? 'on' : ''}`} onClick={() => setCluster('all')}>

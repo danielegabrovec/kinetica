@@ -42,7 +42,9 @@ export function ProtocolInspector() {
       return
     }
     const thisLine = { ...line, scalePercent: 0 }
-    const others = lines.filter((l) => l.id !== line.id && l.enabled)
+    const others = lines.filter(
+      (l) => l.id !== line.id && l.enabled && l.simClusterId === line.simClusterId
+    )
     const simOpts = {
       patient,
       horizonDays,
@@ -86,7 +88,7 @@ export function ProtocolInspector() {
       <div className="hair">Impostazioni</div>
       {!line || !f ? (
         <p style={{ color: '#93A0B5', marginTop: 12 }}>
-          Seleziona uno slot sotto il grafico, o trascina una molecola dalla libreria.
+          Seleziona un cluster sotto il grafico, o trascina una molecola dalla libreria.
         </p>
       ) : (
         <div style={{ marginTop: 12 }}>

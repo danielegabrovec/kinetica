@@ -25,12 +25,14 @@ Kinetica costruisce curve di concentrazione nel tempo a partire da dose, frequen
 
 Il modello è a due costanti (Bateman / flip-flop per i depositi, infusione a ordine zero per gel e cerotti) con **superposition** delle dosi. I blend (Sustanon, Omnadren) sommano i componenti. Si possono adattare le curve a un prelievo (±%) e confrontare protocolli.
 
+Dalla 1.1.0 i protocolli si organizzano in **cluster di simulazione** (curve indipendenti con colore e tratto propri) sovrapponibili sullo stesso grafico, con la serie **Δ** e il confronto Cavg/Cmax/Cmin tra Cluster 1 e Cluster 2.
+
 **Tutto gira in locale:** nessun account, nessun cloud, nessun invio di dati.
 
 ## Installazione (Windows)
 
 1. Apri la pagina [Releases](https://github.com/danielegabrovec/kinetica/releases).
-2. Scarica `Kinetica-Setup-1.0.0.exe` (installer NSIS, 64 bit).
+2. Scarica `Kinetica-Setup-1.1.0.exe` (installer NSIS, 64 bit).
 3. Esegui il file e segui la procedura (lingua italiana, si può scegliere la cartella).
 4. All’avvio accetta l’avvertenza di simulazione.
 
@@ -79,7 +81,10 @@ Layout da editor video:
 - **Trascina in orizzontale** per spostare (scatto 0,5 giorni: es. Sustanon 250 mg al giorno 1 e 100 mg a 3,5 giorni).
 - **Trascina il bordo** per allungare/accorciare la durata.
 - **Trascina in verticale** (maniglia) per alzare/abbassare la dose. L’altezza della clip segue la dose.
-- **Salva / Carica** in alto: JSON locale. I file e i profili stanno in `%APPDATA%\kinetica`.
+- **Cluster**: «Aggiungi cluster» crea un secondo gruppo di molecole con la sua curva; «Sovrapponi» le confronta sullo stesso grafico con la serie Δ.
+- **Salva** (Ctrl+S), **Salva con nome** (Ctrl+Shift+S, mai sovrascrive), **Carica** (Ctrl+O), **Nuovo** (Ctrl+N). Il nome del protocollo si cambia cliccandolo in alto.
+- **File**: elenco dei piani salvati con rinomina, duplica, elimina, **Importa/Esporta JSON** per passare un piano a un altro computer. Tutto sta in `%APPDATA%\kinetica`.
+- **Profili**: alias locali con peso, SHBG, albumina; il cambio profilo salva quello aperto.
 - **Export:** HTML, PDF, stampa, CSV dalla sezione Report.
 
 Frequenze: QID, TID, BID, ED, EOD, 6×/sett. … E3W, e custom.
@@ -112,7 +117,7 @@ npm test
 npm run dist
 ```
 
-L’eseguibile esce in `release\Kinetica-Setup-1.0.0.exe`.
+L’eseguibile esce in `release\Kinetica-Setup-1.1.0.exe`.
 
 ## Struttura
 

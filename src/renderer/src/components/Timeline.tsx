@@ -1,11 +1,11 @@
-import { useEffect, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Trash2 } from 'lucide-react'
 import { CLUSTER_COLOR, getFormulation } from '@shared/catalog'
 import { frequencyLabel } from '@shared/engine/schedule'
 import type { ProtocolLine } from '@shared/types'
 import { useApp } from '../store/useApp'
 import { ClipContextMenu } from './ClipContextMenu'
-import { readMoleculeDrag } from './MoleculeLibrary'
+import { isMoleculeDrag, readMoleculeDrag } from './MoleculeLibrary'
 
 const LANE_H = 56
 
@@ -30,10 +30,12 @@ function daysFromPx(dx: number, laneW: number, horizon: number) {
   return snapHalf((dx / Math.max(laneW, 1)) * horizon)
 }
 
-export function Timeline() {
-  const lines = useApp((s) => s.lines)
+export function ClusterLanes({ clusterId, color: clusterColor }: { clusterId: string; color?: string }) {
+  const allLines = useApp((s) => s.lines)
+  const lines = allLines.filter((l) => l.simClusterId === clusterId)
   const selected = useApp((s) => s.selectedLineId)
   const select = useApp((s) => s.selectLine)
+  const selectCluster = useApp((s) => s.selectSimCluster)
   const add = useApp((s) => s.addFormulation)
   const remove = useApp((s) => s.removeLine)
   const update = useApp((s) => s.updateLine)
@@ -41,6 +43,8 @@ export function Timeline() {
   const horizon = useApp((s) => s.horizonDays)
   const setHorizon = useApp((s) => s.setHorizon)
   const [over, setOver] = useState(false)
+  const [molOver, setMolOver] = useState(false)
+  const overCount = useRef(0)
   const [hud, setHud] = useState<{ x: number; y: number; text: string } | null>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; lineId: string } | null>(null)
 
@@ -61,14 +65,36 @@ export function Timeline() {
 
   const onDropMol = (e: DragEvent) => {
     e.preventDefault()
+    overCount.current = 0
     setOver(false)
+    setMolOver(false)
     const raw = e.dataTransfer.getData('text/plain') || ''
     if (raw.startsWith('line:')) {
-      moveLine(raw.slice(5), null)
+      moveLine(raw.slice(5), null, clusterId)
       return
     }
     const mol = readMoleculeDrag(e)
-    if (mol) add(mol)
+    if (mol) add(mol, clusterId)
+  }
+
+  const onDragEnter = (e: DragEvent) => {
+    e.preventDefault()
+    overCount.current += 1
+    setOver(true)
+    setMolOver(isMoleculeDrag(e))
+  }
+
+  const onDragOverZone = (e: DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = isMoleculeDrag(e) ? 'copy' : 'move'
+  }
+
+  const onDragLeave = () => {
+    overCount.current = Math.max(0, overCount.current - 1)
+    if (overCount.current === 0) {
+      setOver(false)
+      setMolOver(false)
+    }
   }
 
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(horizon * f))
@@ -76,19 +102,13 @@ export function Timeline() {
 
   return (
     <div
-      className={`timeline ${over ? 'over' : ''}`}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
+      className={`timeline ${over ? 'over' : ''} ${molOver ? 'mol-over' : ''}`}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOverZone}
+      onDragLeave={onDragLeave}
       onDrop={onDropMol}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <div className="hair">Tracce</div>
-        <div className="hair">{horizon} giorni</div>
-      </div>
       <div className="ruler">
         {ticks.map((t) => (
           <span key={t}>{t}g</span>
@@ -96,16 +116,17 @@ export function Timeline() {
       </div>
       {lines.map((l) => {
         const f = getFormulation(l.formulationId)
-        const color = f ? CLUSTER_COLOR[f.cluster] : '#94A3B8'
+        const color = clusterColor || (f ? CLUSTER_COLOR[f.cluster] : '#94A3B8')
         const t0 = l.startOffsetDays + l.startHour / 24
         const left = Math.max(0, (t0 / horizon) * 100)
         const width = Math.max(3, (l.durationDays / horizon) * 100)
+        const sameUnit = allLines.filter(
+          (x) => getFormulation(x.formulationId)?.doseUnit === (f?.doseUnit ?? 'mg')
+        )
         const ref = Math.max(
           f?.defaultDose ?? 1,
           ...(f?.typicalDoses ?? []),
-          ...lines
-            .filter((x) => getFormulation(x.formulationId)?.doseUnit === (f?.doseUnit ?? 'mg'))
-            .map((x) => x.dose),
+          ...sameUnit.map((x) => x.dose),
           1
         )
         const h = 12 + Math.min(1, Math.max(0.12, l.dose / ref)) * (LANE_H - 16)
@@ -126,7 +147,7 @@ export function Timeline() {
                 select(l.id)
                 setMenu({ x: e.clientX, y: e.clientY, lineId: l.id })
               }}
-              title="Trascina per riordinare · tasto destro: menu"
+              title="Trascina per riordinare o cambiare cluster · tasto destro: menu"
             >
               {f?.name ?? l.formulationId}
             </button>
@@ -139,11 +160,11 @@ export function Timeline() {
                 e.stopPropagation()
                 const raw = e.dataTransfer.getData('text/plain')
                 if (raw.startsWith('line:')) {
-                  moveLine(raw.slice(5), l.id)
+                  moveLine(raw.slice(5), l.id, clusterId)
                   return
                 }
                 const mol = readMoleculeDrag(e)
-                if (mol) add(mol)
+                if (mol) add(mol, clusterId)
               }}
               onContextMenu={(e) => {
                 e.preventDefault()
@@ -193,7 +214,16 @@ export function Timeline() {
           </div>
         )
       })}
-      <div className={`drop-slot ${over ? 'over' : ''}`}>Trascina qui una molecola per un nuovo slot</div>
+      <div
+        className={`drop-slot ${over ? 'over' : ''} ${molOver ? 'mol-over' : ''}`}
+        onClick={() => selectCluster(clusterId)}
+      >
+        {molOver
+          ? 'Trascina qui la molecola'
+          : lines.length
+            ? 'Trascina qui una molecola in questo cluster'
+            : 'Spazio vuoto · trascina una molecola'}
+      </div>
       <p className="hair" style={{ marginTop: 6 }}>
         Altezza = dose · bordi = durata (mezzi giorni) · su/giù = dose · tasto destro = menu
       </p>
@@ -230,22 +260,24 @@ function dragEdge(
   const off0 = line.startOffsetDays
   const dur0 = line.durationDays
   const end0 = off0 + dur0
-  const onMove = (ev: PointerEvent) => {
-    const days = daysFromPx(ev.clientX - startX, lane.width, horizon)
+  const onMove = (ev: Event) => {
+    const p = ev as PointerEvent
+    const days = daysFromPx(p.clientX - startX, lane.width, horizon)
     if (which === 'end') {
       const dur = Math.max(0.5, snapHalf(dur0 + days))
       update(line.id, { durationDays: dur })
       if (off0 + dur > horizon) setHorizon(Math.ceil(off0 + dur))
-      setHud({ x: ev.clientX, y: ev.clientY, text: `Durata ${fmtDay(dur)} g` })
+      setHud({ x: p.clientX, y: p.clientY, text: `Durata ${fmtDay(dur)} g` })
     } else {
       const off = Math.max(0, Math.min(end0 - 0.5, snapHalf(off0 + days)))
       const dur = Math.max(0.5, snapHalf(end0 - off))
       update(line.id, { startOffsetDays: off, durationDays: dur, startHour: 0 })
-      setHud({ x: ev.clientX, y: ev.clientY, text: `Inizio g ${fmtDay(off)} · durata ${fmtDay(dur)} g` })
+      setHud({ x: p.clientX, y: p.clientY, text: `Inizio g ${fmtDay(off)} · durata ${fmtDay(dur)} g` })
     }
   }
-  const onUp = (ev: PointerEvent) => {
-    el.releasePointerCapture(ev.pointerId)
+  const onUp = (ev: Event) => {
+    const p = ev as PointerEvent
+    el.releasePointerCapture(p.pointerId)
     el.removeEventListener('pointermove', onMove)
     el.removeEventListener('pointerup', onUp)
     setHud(null)
@@ -274,9 +306,10 @@ function dragBody(
   const off0 = line.startOffsetDays + line.startHour / 24
   const dose0 = line.dose
   let mode: 'none' | 'time' | 'dose' = 'none'
-  const onMove = (ev: PointerEvent) => {
-    const dx = ev.clientX - x0
-    const dy = ev.clientY - y0
+  const onMove = (ev: Event) => {
+    const p = ev as PointerEvent
+    const dx = p.clientX - x0
+    const dy = p.clientY - y0
     if (mode === 'none') {
       if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return
       mode = Math.abs(dy) >= Math.abs(dx) - 2 ? 'dose' : 'time'
@@ -285,17 +318,18 @@ function dragBody(
       const days = daysFromPx(dx, lane.width, horizon)
       const off = Math.max(0, snapHalf(off0 + days))
       update(line.id, { startOffsetDays: off, startHour: 0 })
-      setHud({ x: ev.clientX, y: ev.clientY, text: `Inizio giorno ${fmtDay(off)}` })
+      setHud({ x: p.clientX, y: p.clientY, text: `Inizio giorno ${fmtDay(off)}` })
     } else {
       const factor = Math.pow(2, -dy / 48)
       const dose = snapDose(dose0 * factor)
       update(line.id, { dose })
-      setHud({ x: ev.clientX, y: ev.clientY, text: `Dose ${dose} ${unit}` })
+      setHud({ x: p.clientX, y: p.clientY, text: `Dose ${dose} ${unit}` })
     }
   }
-  const onUp = (ev: PointerEvent) => {
+  const onUp = (ev: Event) => {
+    const p = ev as PointerEvent
     try {
-      el.releasePointerCapture(ev.pointerId)
+      el.releasePointerCapture(p.pointerId)
     } catch {
       /* already released */
     }

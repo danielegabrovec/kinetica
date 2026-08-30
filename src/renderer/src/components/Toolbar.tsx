@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import {
+  Copy,
   FileDown,
   FilePlus,
   FolderOpen,
@@ -8,43 +9,73 @@ import {
   Save,
   ScrollText
 } from 'lucide-react'
+import { FileModals } from './FileDialog'
+import { flushPersist } from '../lib/persist'
 import { useApp } from '../store/useApp'
+import { useFileUi } from '../store/useFileUi'
 
 export function Toolbar() {
-  const save = useApp((s) => s.saveSimulation)
-  const load = useApp((s) => s.loadSimulation)
-  const del = useApp((s) => s.deleteSimulation)
   const neu = useApp((s) => s.newProtocol)
-  const library = useApp((s) => s.library)
+  const saveCurrent = useApp((s) => s.saveCurrent)
   const dirty = useApp((s) => s.dirty)
-  const currentName = useApp((s) => s.currentName)
   const setView = useApp((s) => s.setView)
-  const [openLoad, setOpenLoad] = useState(false)
+  const openSaveAs = useFileUi((s) => s.openSaveAs)
+  const openLoad = useFileUi((s) => s.openLoad)
+  const request = useFileUi((s) => s.request)
+  const flash = useFileUi((s) => s.flash)
+  const modal = useFileUi((s) => s.modal)
 
-  const onSave = () => {
-    const name = prompt('Nome della simulazione', currentName ?? 'Simulazione')
-    if (name) save(name)
+  const doSave = () => {
+    if (saveCurrent()) {
+      flushPersist()
+      flash('Salvato')
+      return
+    }
+    openSaveAs()
   }
 
-  const onNew = () => {
-    if (dirty && !confirm('Scartare le modifiche non salvate?')) return
-    neu()
-  }
-
+  const onNew = () => request(() => neu())
+  const onLoad = () => request(() => openLoad())
   const onPrint = () => {
     if (window.kinetica) void window.kinetica.print()
     else window.print()
   }
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (modal) return
+      const key = e.key.toLowerCase()
+      if (!(e.ctrlKey || e.metaKey)) return
+      if (key === 's') {
+        e.preventDefault()
+        if (e.shiftKey) openSaveAs()
+        else doSave()
+      }
+      if (key === 'o') {
+        e.preventDefault()
+        onLoad()
+      }
+      if (key === 'n') {
+        e.preventDefault()
+        onNew()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
-      <button className="tb-btn" onClick={onNew} title="Nuovo protocollo">
+      <button className="tb-btn" onClick={onNew} title="Nuovo piano (Ctrl+N)">
         <FilePlus size={15} strokeWidth={1.7} /> Nuovo
       </button>
-      <button className="tb-btn" onClick={onSave} title="Salva in locale">
+      <button className="tb-btn" onClick={doSave} title="Salva (Ctrl+S)">
         <Save size={15} strokeWidth={1.7} /> Salva
       </button>
-      <button className="tb-btn" onClick={() => setOpenLoad((v) => !v)} title="Carica una simulazione">
+      <button className="tb-btn" onClick={() => openSaveAs()} title="Salva come nuovo piano (Ctrl+Shift+S)">
+        <Copy size={15} strokeWidth={1.7} /> Salva con nome
+      </button>
+      <button className="tb-btn" onClick={onLoad} title="Carica un piano (Ctrl+O)">
         <FolderOpen size={15} strokeWidth={1.7} /> Carica
       </button>
       <button className="tb-btn" onClick={() => setView('report')} title="Report ed export">
@@ -60,38 +91,7 @@ export function Toolbar() {
         <Info size={15} strokeWidth={1.7} /> Info
       </button>
       {dirty ? <span className="hair">non salvato</span> : null}
-      {openLoad ? (
-        <div
-          className="picker-pop"
-          style={{ position: 'absolute', top: 40, left: 80, width: 320, zIndex: 20 }}
-        >
-          <div className="hair" style={{ padding: '8px 10px' }}>
-            Simulazioni salvate
-          </div>
-          {library.length === 0 ? (
-            <p style={{ padding: 12, color: '#93A0B5' }}>Nessun file. Prima Salva.</p>
-          ) : (
-            library.map((s) => (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
-                <button
-                  className="hit"
-                  style={{ flex: 1 }}
-                  onClick={() => {
-                    load(s.id)
-                    setOpenLoad(false)
-                  }}
-                >
-                  <span>{s.name}</span>
-                  <span className="hair">{new Date(s.updatedAt).toLocaleString()}</span>
-                </button>
-                <button className="icon-btn" title="Elimina" onClick={() => del(s.id)}>
-                  ×
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      ) : null}
+      <FileModals />
     </div>
   )
 }

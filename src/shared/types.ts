@@ -94,6 +94,15 @@ export interface Frequency {
   days?: number[]
 }
 
+export type SimStroke = 'solid' | 'dashed' | 'dotted'
+
+export interface SimCluster {
+  id: string
+  color?: string
+  stroke?: SimStroke
+  lineWidth?: number
+}
+
 export interface ProtocolLine {
   id: string
   formulationId: string
@@ -109,6 +118,8 @@ export interface ProtocolLine {
   /** Multiply this line's curve: 0 = model, +20 = ×1.2, −20 = ×0.8. */
   scalePercent?: number
   enabled: boolean
+  /** Visual/compare group (Cluster 1…n). Independent of catalog ClusterId. */
+  simClusterId?: string
 }
 
 export interface PatientProfile {
@@ -131,6 +142,7 @@ export interface SavedSimulation {
   horizonDays: number
   cvPercent: number
   lines: ProtocolLine[]
+  simClusters?: SimCluster[]
   notes?: string
 }
 
@@ -145,6 +157,7 @@ export interface AppSettings {
   showRefMax: boolean
   showRefMin: boolean
   showRefAvg: boolean
+  overlayClusters: boolean
   disclaimerAccepted: boolean
 }
 

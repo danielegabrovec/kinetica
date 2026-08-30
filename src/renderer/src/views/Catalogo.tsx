@@ -19,12 +19,20 @@ export function Catalogo() {
 
   const list = useMemo(() => {
     return COMPOUNDS.filter((c) => {
-      if (cluster !== 'all' && c.cluster !== cluster) return false
+      if (cluster !== 'all' && !q.trim() && c.cluster !== cluster) return false
       const forms = c.formulationIds.map((id) => getFormulation(id)!).filter(Boolean)
       if (!showC && forms.every((f) => f.evidence === 'C')) return false
       if (!q.trim()) return true
-      const blob = [c.inn, c.classLabel, ...c.aliases, ...forms.map((f) => f.name)].join(' ').toLowerCase()
-      return blob.includes(q.toLowerCase())
+      const blob = [c.inn, c.classLabel, ...c.aliases, ...forms.map((f) => `${f.name} ${f.brand ?? ''}`)]
+        .join(' ')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+      const needle = q
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+      return blob.includes(needle)
     })
   }, [cluster, q, showC])
 
@@ -36,7 +44,11 @@ export function Catalogo() {
         <input
           placeholder="Filtra catalogo"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value
+            setQ(v)
+            if (v.trim()) setCluster('all')
+          }}
           style={{ width: '100%', background: '#0b1220', border: '1px solid #243044', padding: 8, marginBottom: 8 }}
         />
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>

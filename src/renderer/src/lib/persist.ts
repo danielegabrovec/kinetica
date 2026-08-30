@@ -1,5 +1,5 @@
 import { useApp } from '../store/useApp'
-import type { AppSettings, PatientProfile, ProtocolLine, SavedSimulation } from '@shared/types'
+import type { AppSettings, PatientProfile, ProtocolLine, SavedSimulation, SimCluster } from '@shared/types'
 
 const LS_KEY = 'kinetica.v1'
 
@@ -8,8 +8,13 @@ type Payload = {
   patients: PatientProfile[]
   draft: {
     lines: ProtocolLine[]
+    simClusters?: SimCluster[]
+    selectedSimClusterId?: string
     horizonDays: number
     patient: PatientProfile
+    currentName?: string | null
+    currentSimId?: string | null
+    dirty?: boolean
     settings: AppSettings
   } | null
 }
@@ -46,15 +51,30 @@ export async function hydrateStore() {
     library: data.simulations ?? [],
     patients: data.patients?.length ? data.patients : undefined,
     lines: data.draft?.lines,
+    simClusters: data.draft?.simClusters,
+    selectedSimClusterId: data.draft?.selectedSimClusterId,
     horizonDays: data.draft?.horizonDays,
     patient: data.draft?.patient,
-    settings: data.draft?.settings
+    settings: data.draft?.settings,
+    currentName: data.draft?.currentName,
+    currentSimId: data.draft?.currentSimId,
+    dirty: data.draft?.dirty
   })
 }
 
 let t: ReturnType<typeof setTimeout> | null = null
+
+export function flushPersist() {
+  if (t) {
+    clearTimeout(t)
+    t = null
+  }
+  void write(useApp.getState().snapshot())
+}
+
 export function bindAutosave() {
   return useApp.subscribe(() => {
+    if (!useApp.getState().ready) return
     if (t) clearTimeout(t)
     t = setTimeout(() => {
       const snap = useApp.getState().snapshot()

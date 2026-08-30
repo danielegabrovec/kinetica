@@ -6,7 +6,7 @@ export function StatsPanel({ result }: { result: SimulationResult }) {
   const mode = useApp((s) => s.settings.unitMode)
   const stats = result.analyteStats.filter((s) => !s.analyte.endsWith('-est') && !s.analyte.endsWith('-free'))
   if (!stats.length) {
-    return <div className="hair">Trascina una molecola nello slot per vedere picco, valle e media.</div>
+    return <div className="hair">Trascina una molecola in questo cluster per vedere picco, valle e media.</div>
   }
 
   return (

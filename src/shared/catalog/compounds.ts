@@ -9,7 +9,7 @@ export const COMPOUNDS: Compound[] = [
   {
     id: 'testosterone',
     inn: 'Testosterone',
-    aliases: ['T', 'TRT', 'Nebido', 'Sustanon', 'Testogel'],
+    aliases: ['T', 'TRT'],
     cluster: 'testosterone',
     classLabel: 'Androgeno endogeno',
     formulationIds: ids('testosterone'),
@@ -30,7 +30,7 @@ Le bande 300–1000 ng/dL (10,4–34,7 nmol/L) sono un riferimento da laboratori
   {
     id: 'nandrolone',
     inn: 'Nandrolone',
-    aliases: ['Deca', 'NPP', '19-nortestosterone'],
+    aliases: ['19-nortestosterone'],
     cluster: 'androgens',
     classLabel: '19-nor androgeno',
     formulationIds: ids('nandrolone'),

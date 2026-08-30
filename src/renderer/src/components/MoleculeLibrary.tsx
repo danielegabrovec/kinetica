@@ -1,21 +1,34 @@
-import { useMemo, useState, type DragEvent } from 'react'
+import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import {
   CLUSTER_COLOR,
   CLUSTER_LABEL,
   CLUSTER_ORDER,
-  searchFormulations
+  listFormulations
 } from '@shared/catalog'
 import type { ClusterId } from '@shared/types'
 import { useApp } from '../store/useApp'
 
 const MIME = 'text/plain'
+export const MOL_MIME = 'application/x-kinetica-mol'
 
 export function dragMolecule(e: DragEvent, formulationId: string) {
   e.dataTransfer.setData(MIME, `mol:${formulationId}`)
+  e.dataTransfer.setData(MOL_MIME, formulationId)
   e.dataTransfer.effectAllowed = 'copy'
+  document.body.classList.add('dragging-mol')
+}
+
+export function endMoleculeDrag() {
+  document.body.classList.remove('dragging-mol')
+}
+
+export function isMoleculeDrag(e: DragEvent) {
+  return e.dataTransfer.types.includes(MOL_MIME) || document.body.classList.contains('dragging-mol')
 }
 
 export function readMoleculeDrag(e: DragEvent): string | null {
+  const typed = e.dataTransfer.getData(MOL_MIME)
+  if (typed) return typed
   const raw = e.dataTransfer.getData(MIME) || e.dataTransfer.getData('text/plain')
   if (raw.startsWith('mol:')) return raw.slice(4)
   if (raw.startsWith('line:')) return null
@@ -28,12 +41,21 @@ export function MoleculeLibrary() {
   const [q, setQ] = useState('')
   const [cluster, setCluster] = useState<ClusterId | 'all'>('all')
 
-  const hits = useMemo(() => {
-    let list = searchFormulations(q)
-    if (cluster !== 'all') list = list.filter((f) => f.cluster === cluster)
-    if (!showC) list = list.filter((f) => f.evidence !== 'C')
-    return list
-  }, [q, cluster, showC])
+  const hits = useMemo(
+    () => listFormulations({ q, cluster, showEvidenceC: showC }),
+    [q, cluster, showC]
+  )
+
+  useEffect(() => {
+    const clear = () => endMoleculeDrag()
+    window.addEventListener('dragend', clear)
+    window.addEventListener('drop', clear)
+    return () => {
+      window.removeEventListener('dragend', clear)
+      window.removeEventListener('drop', clear)
+      endMoleculeDrag()
+    }
+  }, [])
 
   return (
     <aside className="library">
@@ -43,7 +65,11 @@ export function MoleculeLibrary() {
         value={q}
         autoComplete="off"
         spellCheck={false}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={(e) => {
+          const v = e.target.value
+          setQ(v)
+          if (v.trim()) setCluster('all')
+        }}
         onKeyDown={(e) => e.stopPropagation()}
         style={{
           width: '100%',
@@ -79,8 +105,9 @@ export function MoleculeLibrary() {
             className="mol-item"
             draggable
             onDragStart={(e) => dragMolecule(e, f.id)}
+            onDragEnd={endMoleculeDrag}
             onDoubleClick={() => add(f.id)}
-            title="Trascina nello slot sotto il grafico, o doppio clic"
+            title="Trascina in un cluster, o doppio clic per aggiungere al cluster selezionato"
           >
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span
@@ -101,7 +128,7 @@ export function MoleculeLibrary() {
         {hits.length === 0 ? <p style={{ color: '#93A0B5', padding: 8 }}>Nessun risultato.</p> : null}
       </div>
       <p className="hair" style={{ marginTop: 8 }}>
-        Trascina in uno slot · doppio clic per aggiungere
+        Trascina in un cluster · doppio clic per aggiungere al cluster selezionato
       </p>
     </aside>
   )

@@ -21,6 +21,10 @@ async function ensureDir() {
   return dir
 }
 
+function parentWindow(): BrowserWindow | undefined {
+  return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+}
+
 function createWindow() {
   const iconFile = join(__dirname, '../../build/icon.png')
   const win = new BrowserWindow({
@@ -89,15 +93,30 @@ ipcMain.handle('kinetica:save-library', async (_e, payload: unknown) => {
 })
 
 ipcMain.handle('kinetica:export-file', async (_e, opts: { defaultName: string; content: string; ext: string }) => {
-  const win = BrowserWindow.getFocusedWindow()
-  const saveOpts = {
+  const win = parentWindow()
+  const dialogOpts = {
     defaultPath: opts.defaultName,
     filters: [{ name: opts.ext.toUpperCase(), extensions: [opts.ext.replace('.', '')] }]
   }
-  const res = win ? await dialog.showSaveDialog(win, saveOpts) : await dialog.showSaveDialog(saveOpts)
+  const res = win ? await dialog.showSaveDialog(win, dialogOpts) : await dialog.showSaveDialog(dialogOpts)
   if (res.canceled || !res.filePath) return { ok: false }
   await writeFile(res.filePath, opts.content, 'utf8')
   return { ok: true, path: res.filePath }
+})
+
+ipcMain.handle('kinetica:import-file', async () => {
+  const win = parentWindow()
+  const dialogOpts = {
+    properties: ['openFile' as const],
+    filters: [
+      { name: 'Piano Kinetica', extensions: ['json'] },
+      { name: 'Tutti i file', extensions: ['*'] }
+    ]
+  }
+  const res = win ? await dialog.showOpenDialog(win, dialogOpts) : await dialog.showOpenDialog(dialogOpts)
+  if (res.canceled || !res.filePaths[0]) return { ok: false, canceled: true }
+  const content = await readFile(res.filePaths[0], 'utf8')
+  return { ok: true, content, path: res.filePaths[0] }
 })
 
 ipcMain.handle('kinetica:print', async () => {

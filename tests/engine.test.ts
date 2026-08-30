@@ -36,10 +36,20 @@ function line(partial: Partial<ProtocolLine> & Pick<ProtocolLine, 'formulationId
 describe('search', () => {
   it('filtra mentre si digita', async () => {
     const { searchFormulations } = await import('@shared/catalog')
-    expect(searchFormulations('enan').some((f) => f.id === 'test-enanthate')).toBe(true)
-    expect(searchFormulations('sustanon').some((f) => f.id === 'test-sustanon-250')).toBe(true)
-    expect(searchFormulations('nebido').length).toBeGreaterThan(0)
+    expect(searchFormulations('enan')[0]?.id).toBe('test-enanthate')
+    expect(searchFormulations('cipio').some((f) => f.id === 'test-cypionate')).toBe(true)
+    const sust = searchFormulations('sustanon')
+    expect(sust.map((f) => f.id)).toEqual(['test-sustanon-250'])
+    expect(searchFormulations('nebido').some((f) => f.id === 'test-undecanoate-castor')).toBe(true)
     expect(searchFormulations('xyznonexistent').length).toBe(0)
+  })
+
+  it('mentre si digita ignora il chip famiglia del catalogo', async () => {
+    const { listFormulations } = await import('@shared/catalog')
+    const locked = listFormulations({ q: 'estradiol', cluster: 'testosterone', showEvidenceC: true })
+    expect(locked.some((f) => f.cluster === 'estrogens')).toBe(true)
+    const idle = listFormulations({ q: '', cluster: 'testosterone', showEvidenceC: true })
+    expect(idle.every((f) => f.cluster === 'testosterone')).toBe(true)
   })
 })
 

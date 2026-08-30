@@ -5,9 +5,10 @@ import {
   COMPOUNDS,
   FREQUENCIES,
   getFormulation,
-  searchFormulations
+  listFormulations
 } from '@shared/catalog'
 import { frequencyLabel } from '@shared/engine/schedule'
+import { simClusterLabel } from '@shared/sim-cluster'
 import type { Compound, Formulation, ProtocolLine } from '@shared/types'
 import { useApp } from '../store/useApp'
 
@@ -76,6 +77,8 @@ export function ClipContextMenu({
   const changeFormulation = useApp((s) => s.changeFormulation)
   const remove = useApp((s) => s.removeLine)
   const dup = useApp((s) => s.duplicateLine)
+  const moveLine = useApp((s) => s.moveLine)
+  const simClusters = useApp((s) => s.simClusters)
   const horizon = useApp((s) => s.horizonDays)
   const setHorizon = useApp((s) => s.setHorizon)
   const showC = useApp((s) => s.settings.showEvidenceC)
@@ -103,11 +106,10 @@ export function ClipContextMenu({
     [showC]
   )
 
-  const hits = useMemo(() => {
-    let list = searchFormulations(q)
-    if (!showC) list = list.filter((x) => x.evidence !== 'C')
-    return list
-  }, [q, showC])
+  const hits = useMemo(
+    () => listFormulations({ q, showEvidenceC: showC }),
+    [q, showC]
+  )
 
   const searching = q.trim().length > 0
 
@@ -216,7 +218,7 @@ export function ClipContextMenu({
           onOpen={() => setSub('curve')}
         />
         <MenuItem
-          label="Traccia"
+          label="Riga"
           hint={frequencyLabel(line)}
           active={sub === 'track'}
           bind={(el) => {
@@ -479,6 +481,21 @@ export function ClipContextMenu({
               >
                 Duplica
               </button>
+              {simClusters.length > 1
+                ? simClusters.map((c, i) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={c.id === line.simClusterId ? 'on' : ''}
+                      onClick={() => {
+                        moveLine(line.id, null, c.id)
+                        onClose()
+                      }}
+                    >
+                      Sposta in {simClusterLabel(i)}
+                    </button>
+                  ))
+                : null}
               <button type="button" onClick={() => go({ enabled: !line.enabled })}>
                 {line.enabled ? 'Disattiva (muta)' : 'Riattiva'}
               </button>

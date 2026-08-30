@@ -477,7 +477,7 @@ export const FORMULATIONS: Formulation[] = [
     id: 'nandrolone-pp',
     compoundId: 'nandrolone',
     name: 'Nandrolone fenilpropionato',
-    brand: 'Durabolin',
+    brand: 'Durabolin / NPP',
     cluster: 'androgens',
     analyte: 'nandrolone',
     analyteLabel: 'Nandrolone',

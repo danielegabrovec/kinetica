@@ -3,7 +3,7 @@ import {
   CLUSTER_LABEL,
   CLUSTER_ORDER,
   FORMULATIONS,
-  searchFormulations
+  listFormulations
 } from '@shared/catalog'
 import type { ClusterId, Formulation } from '@shared/types'
 
@@ -22,12 +22,10 @@ export function FormulationPicker({
   const [cluster, setCluster] = useState<ClusterId | 'all'>('all')
   const root = useRef<HTMLDivElement>(null)
 
-  const hits = useMemo(() => {
-    let list = q ? searchFormulations(q) : FORMULATIONS
-    if (cluster !== 'all') list = list.filter((f) => f.cluster === cluster)
-    if (!showEvidenceC) list = list.filter((f) => f.evidence !== 'C')
-    return list
-  }, [q, cluster, showEvidenceC])
+  const hits = useMemo(
+    () => listFormulations({ q, cluster, showEvidenceC: showEvidenceC }),
+    [q, cluster, showEvidenceC]
+  )
 
   useEffect(() => {
     if (!open) return
@@ -41,9 +39,9 @@ export function FormulationPicker({
   useEffect(() => {
     if (open) {
       setQ('')
-      setCluster(current?.cluster ?? 'all')
+      setCluster('all')
     }
-  }, [open, current?.cluster])
+  }, [open])
 
   return (
     <div className="field" ref={root}>
@@ -66,7 +64,11 @@ export function FormulationPicker({
             autoFocus
             placeholder="Cerca estere, brand, INN…"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value
+              setQ(v)
+              if (v.trim()) setCluster('all')
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && hits[0]) {
                 onChange(hits[0].id)

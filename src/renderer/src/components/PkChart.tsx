@@ -1,16 +1,35 @@
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
 import { CLUSTER_COLOR, getFormulation } from '@shared/catalog'
-import { convert, preferredUnit } from '@shared/engine/units'
-import type { ProtocolLine, SimulationResult } from '@shared/types'
+import {
+  DELTA_COLOR,
+  overlayDeltaStats,
+  overlayDeltas,
+  overlayTimeGrid,
+  primarySeries,
+  resampleSeries
+} from '@shared/engine/overlay'
+import { convert, formatConc, preferredUnit } from '@shared/engine/units'
+import type { DisplayUnit, ProtocolLine, SimStroke, SimulationResult } from '@shared/types'
 import { useApp } from '../store/useApp'
 
-export function PkChart({ result }: { result: SimulationResult }) {
+export type ChartPaint = { color: string; stroke?: SimStroke; lineWidth?: number }
+
+export function PkChart({
+  result,
+  lines: linesProp,
+  paint
+}: {
+  result: SimulationResult
+  lines?: ProtocolLine[]
+  paint?: ChartPaint
+}) {
   const settings = useApp((s) => s.settings)
-  const lines = useApp((s) => s.lines)
+  const storeLines = useApp((s) => s.lines)
+  const lines = linesProp ?? storeLines
   const selected = useApp((s) => s.selectedLineId)
   const patch = useApp((s) => s.patchSettings)
-  const option = build(result, settings, selected, lines)
+  const option = build(result, settings, selected, lines, paint)
 
   return (
     <div className="chart-wrap">
@@ -34,6 +53,222 @@ export function PkChart({ result }: { result: SimulationResult }) {
   )
 }
 
+export type OverlayGroup = {
+  label: string
+  color: string
+  stroke?: SimStroke
+  lineWidth?: number
+  result: SimulationResult
+}
+
+export function OverlayChart({ groups }: { groups: OverlayGroup[] }) {
+  const settings = useApp((s) => s.settings)
+  const unitMode = settings.unitMode
+  const horizon = Math.max(...groups.map((g) => g.result.horizonDays), 1)
+  const times = overlayTimeGrid(horizon)
+  const series: EChartsOption['series'] = []
+  const units: string[] = []
+  const unitByName = new Map<string, string>()
+
+  for (const g of groups) {
+    const stroke = g.stroke ?? 'solid'
+    const width = g.lineWidth ?? 2.4
+    for (const s of primarySeries(g.result)) {
+      const unit = preferredUnit(s.unit, unitMode)
+      if (!units.includes(unit)) units.push(unit)
+      const yAxisIndex = units[1] && unit === units[1] ? 1 : 0
+      const name = `${g.label} · ${s.analyteLabel}`
+      unitByName.set(name, unit)
+      series.push({
+        name,
+        type: 'line',
+        yAxisIndex,
+        color: g.color,
+        data: resampleSeries(s, times, unit),
+        showSymbol: false,
+        connectNulls: true,
+        itemStyle: { color: g.color },
+        lineStyle: { width, color: g.color, type: stroke },
+        emphasis: { focus: 'none', lineStyle: { width, color: g.color } },
+        z: 3
+      } as never)
+    }
+  }
+
+  const deltas = overlayDeltas(groups, times, unitMode)
+  for (const d of deltas) {
+    if (!units.includes(d.unit)) units.push(d.unit)
+    const yAxisIndex = units[1] && d.unit === units[1] ? 1 : 0
+    unitByName.set(d.name, d.unit)
+    series.push({
+      name: d.name,
+      type: 'line',
+      yAxisIndex,
+      color: DELTA_COLOR,
+      data: d.delta,
+      showSymbol: false,
+      connectNulls: true,
+      itemStyle: { color: DELTA_COLOR },
+      lineStyle: { width: 1.6, color: DELTA_COLOR, type: 'dotted' },
+      emphasis: { focus: 'none' },
+      z: 4
+    } as never)
+  }
+
+  const y1 = units[0]
+  const y2 = units[1]
+  const stats = overlayDeltaStats(groups, unitMode)
+
+  const option: EChartsOption = {
+    backgroundColor: 'transparent',
+    animation: false,
+    grid: { left: 58, right: y2 ? 58 : 18, top: 28, bottom: 42 },
+    legend: {
+      top: 4,
+      textStyle: { color: '#93A0B5', fontFamily: 'IBM Plex Sans', fontSize: 11 }
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'line', snap: true },
+      backgroundColor: '#121A2A',
+      borderColor: '#243044',
+      confine: true,
+      textStyle: { color: '#E8EDF5', fontFamily: 'IBM Plex Mono', fontSize: 12 },
+      formatter: (raw) => overlayTooltip(raw, unitByName)
+    },
+    xAxis: {
+      type: 'value',
+      name: 'giorni',
+      nameTextStyle: { color: '#93A0B5', fontFamily: 'IBM Plex Mono', fontSize: 10 },
+      axisLine: { lineStyle: { color: '#243044' } },
+      axisLabel: { color: '#93A0B5', fontFamily: 'IBM Plex Mono' },
+      splitLine: { lineStyle: { color: 'rgba(36,48,68,0.55)', type: 'dashed' } }
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: y1,
+        nameTextStyle: { color: '#93A0B5', fontFamily: 'IBM Plex Mono', fontSize: 10 },
+        axisLine: { lineStyle: { color: '#243044' } },
+        axisLabel: { color: '#93A0B5', fontFamily: 'IBM Plex Mono' },
+        splitLine: { lineStyle: { color: 'rgba(36,48,68,0.4)' } }
+      },
+      {
+        type: 'value',
+        name: y2 ?? '',
+        show: Boolean(y2),
+        axisLabel: { color: '#93A0B5', fontFamily: 'IBM Plex Mono' },
+        splitLine: { show: false }
+      }
+    ],
+    dataZoom: [
+      { type: 'inside' },
+      {
+        type: 'slider',
+        height: 12,
+        bottom: 8,
+        borderColor: '#243044',
+        fillerColor: 'rgba(212,165,116,0.14)',
+        handleStyle: { color: '#D4A574' },
+        textStyle: { color: '#93A0B5', fontSize: 10 }
+      }
+    ],
+    series
+  }
+
+  return (
+    <div className="overlay-wrap">
+      <div className="chart-wrap overlay-chart">
+        <ReactECharts
+          option={option}
+          style={{ height: '100%', width: '100%' }}
+          notMerge
+          lazyUpdate
+          opts={{ renderer: 'canvas' }}
+        />
+      </div>
+      {stats.length ? (
+        <div className="overlay-delta">
+          {stats.map((row) => (
+            <div key={`${row.label}-${row.analyteLabel}`} className="overlay-delta-row">
+              <span className="overlay-delta-label">
+                {row.label}
+                {stats.length > 1 || row.analyteLabel ? ` · ${row.analyteLabel}` : ''}
+                <em> stato stazionario</em>
+              </span>
+              <span>
+                Cavg {signedConc(row.dcavg, row.unit)}
+              </span>
+              <span>Cmax {signedConc(row.dcmax, row.unit)}</span>
+              <span>Cmin {signedConc(row.dcmin, row.unit)}</span>
+              <span>
+                P/T {Number.isFinite(row.dpt) ? `${row.dpt > 0 ? '+' : ''}${row.dpt.toFixed(2)}` : '—'}
+              </span>
+            </div>
+          ))}
+          <p className="hair" style={{ margin: 0 }}>
+            Sul grafico, la curva punteggiata è il Δ istantaneo. Il tooltip al cursore mostra entrambi i valori e il Δ.
+          </p>
+        </div>
+      ) : groups.length >= 2 ? (
+        <p className="hair" style={{ marginTop: 8 }}>
+          Analiti o unità diversi: il tooltip mostra entrambi i valori, senza curva Δ.
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+function signedConc(value: number, unit: Parameters<typeof formatConc>[1]) {
+  if (!Number.isFinite(value)) return '—'
+  const core = formatConc(Math.abs(value), unit)
+  if (value > 0) return `+${core}`
+  if (value < 0) return `−${core}`
+  return core
+}
+
+function overlayTooltip(raw: unknown, unitByName: Map<string, string>): string {
+  const list = (Array.isArray(raw) ? raw : [raw]) as {
+    seriesName?: string
+    color?: string
+    value?: unknown
+  }[]
+  const rows = list
+    .map((p) => {
+      const value = Array.isArray(p.value) ? p.value : null
+      if (!value || value.length < 2) return null
+      const t = Number(value[0])
+      const v = Number(value[1])
+      if (!Number.isFinite(t) || !Number.isFinite(v)) return null
+      return { name: p.seriesName ?? '', color: p.color ?? '#E8EDF5', t, v }
+    })
+    .filter(Boolean) as { name: string; color: string; t: number; v: number }[]
+  if (!rows.length) return ''
+  const t = rows[0]!.t
+  const day = t < 10 ? t.toFixed(2) : t.toFixed(1)
+  const body = rows
+    .map((r) => {
+      const unit = (unitByName.get(r.name) || 'ng/dL') as DisplayUnit
+      const delta = r.name.startsWith('Δ')
+      const shown = delta ? signedConc(r.v, unit) : formatConc(r.v, unit)
+      return `<tr>
+        <td style="padding:2px 12px 2px 0;white-space:nowrap">
+          <span style="color:${esc(r.color)}">●</span> ${esc(r.name)}
+        </td>
+        <td style="text-align:right;white-space:nowrap">${esc(shown)}</td>
+      </tr>`
+    })
+    .join('')
+  return `<div style="font-family:IBM Plex Mono,monospace;font-size:11px">
+    <div style="color:#93A0B5;margin-bottom:6px">giorno ${esc(day)}</div>
+    <table>${body}</table>
+  </div>`
+}
+
+function esc(s: string) {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+}
+
 function build(
   result: SimulationResult,
   settings: {
@@ -44,7 +279,8 @@ function build(
     showRefAvg?: boolean
   },
   selected: string | null,
-  lines: ProtocolLine[]
+  lines: ProtocolLine[],
+  paint?: ChartPaint
 ): EChartsOption {
   const unitMode = settings.unitMode
   const showUnc = settings.showUncertainty
@@ -56,21 +292,26 @@ function build(
   result.series.forEach((s, idx) => {
     const unit = preferredUnit(s.unit, unitMode)
     const yAxisIndex = y2 && unit === y2 ? 1 : 0
-    const color = s.color || CLUSTER_COLOR[s.cluster]
-    const dim = selected && !s.lineIds.includes(selected) && lines.length > 1 ? 0.3 : 1
+    const color = paint?.color || s.color || CLUSTER_COLOR[s.cluster]
+    const selectedHere = Boolean(selected && lines.some((l) => l.id === selected))
+    const dim = selectedHere && selected && !s.lineIds.includes(selected) && lines.length > 1 ? 0.3 : 1
     const data = s.points.map((p) => [round(p.tDays), convert(p.value, s.unit, unit)])
+    const stroke = paint?.stroke ?? (idx % 2 === 1 ? 'dashed' : 'solid')
+    const width = paint?.lineWidth ?? 2.2
 
     series.push({
       name: `${s.analyteLabel} (${unit})`,
       type: 'line',
       yAxisIndex,
+      color,
       data,
       showSymbol: false,
+      itemStyle: { color },
       lineStyle: {
-        width: 2.2,
+        width,
         color,
         opacity: dim,
-        type: idx % 2 === 1 ? 'dashed' : 'solid'
+        type: stroke
       },
       z: 3
     } as never)

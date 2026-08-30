@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { DISCLAIMER } from '@shared/catalog/theory'
 import { CommandPalette } from './components/CommandPalette'
+import { ProtocolTitle } from './components/ProtocolTitle'
 import { Toolbar } from './components/Toolbar'
 import { useApp, type ViewId } from './store/useApp'
 import { Catalogo } from './views/Catalogo'
@@ -43,7 +44,6 @@ export function App() {
   const unit = useApp((s) => s.settings.unitMode)
   const patch = useApp((s) => s.patchSettings)
   const patient = useApp((s) => s.patient)
-  const currentName = useApp((s) => s.currentName)
   const editor = view === 'simula'
   const gridClass = editor ? 'app-grid editor' : 'app-grid wide'
 
@@ -75,10 +75,7 @@ export function App() {
         })}
       </nav>
       <header className="topbar">
-        <div style={{ minWidth: 140 }}>
-          <div className="hair">Kinetica</div>
-          <div style={{ fontWeight: 600, fontSize: 13 }}>{currentName ?? 'Simulatore'}</div>
-        </div>
+        <ProtocolTitle />
         <Toolbar />
         <span style={{ flex: 1 }} />
         <span className="hair">{patient.alias}</span>
