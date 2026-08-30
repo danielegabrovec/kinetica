@@ -8,7 +8,7 @@
   --color-panel: #121a2a;
   --color-panel-2: #182234;
   --color-line: #243044;
-  --color-copper: #d4A574;
+  --color-copper: #d4a574;
   --color-copper-dim: #8c6a45;
   --color-rose: #e8a0b0;
   --color-violet: #a78bfa;
@@ -45,6 +45,12 @@ select,
 textarea {
   font-family: inherit;
   color: inherit;
+}
+
+input,
+select,
+textarea {
+  min-height: 36px;
 }
 
 button {
@@ -156,6 +162,11 @@ button {
   color: var(--color-text);
   padding: 6px 10px;
   font-size: 12px;
+  white-space: nowrap;
+}
+
+.tb-btn svg {
+  flex-shrink: 0;
 }
 
 .tb-btn:hover {
@@ -891,6 +902,17 @@ body.dragging-mol .sim-cluster .timeline {
   color: var(--color-mute);
   padding: 6px 10px;
   font-size: 12px;
+  min-height: 36px;
+}
+
+.view-loading {
+  grid-column: 2 / -1;
+  display: grid;
+  place-items: center;
+  color: var(--color-mute);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .ghost:hover {
@@ -905,6 +927,7 @@ body.dragging-mol .sim-cluster .timeline {
   padding: 8px 12px;
   font-weight: 600;
   font-size: 13px;
+  min-height: 36px;
 }
 
 .primary:hover {
@@ -1194,6 +1217,43 @@ body.dragging-mol .sim-cluster .timeline {
   font-size: 13px;
   padding: 8px 16px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  max-width: min(720px, calc(100vw - 48px));
+  text-align: center;
+}
+
+.report-chart-frame {
+  height: 240px;
+  margin-bottom: 8px;
+}
+
+.report-chart-frame .chart-wrap {
+  height: 100%;
+  min-height: 0;
+}
+
+.report-actions {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -12px -16px 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-line);
+  background: rgba(11, 18, 32, 0.94);
+  backdrop-filter: blur(10px);
+}
+
+.report-quality-note {
+  max-width: 720px;
+  margin: 10px 0 18px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--color-copper);
+  background: rgba(212, 165, 116, 0.07);
+  color: var(--color-mute);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .file-toast.err {
@@ -1274,6 +1334,27 @@ body.dragging-mol .sim-cluster .timeline {
   html {
     background: white;
     color: #111;
+  }
+}
+
+@media (max-width: 1260px) {
+  .topbar {
+    gap: 7px;
+    padding-inline: 10px;
+  }
+
+  .protocol-title-wrap {
+    flex-basis: 220px;
+  }
+
+  .tb-btn {
+    width: 34px;
+    justify-content: center;
+    padding-inline: 8px;
+  }
+
+  .tb-label {
+    display: none;
   }
 }
 

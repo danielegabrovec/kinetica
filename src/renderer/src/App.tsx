@@ -9,20 +9,22 @@ import {
   Settings,
   Users
 } from 'lucide-react'
+import { lazy, Suspense } from 'react'
 import { DISCLAIMER } from '@shared/catalog/theory'
 import { CommandPalette } from './components/CommandPalette'
 import { ProtocolTitle } from './components/ProtocolTitle'
 import { Toolbar } from './components/Toolbar'
 import { useApp, type ViewId } from './store/useApp'
-import { Catalogo } from './views/Catalogo'
-import { Confronta } from './views/Confronta'
-import { Impostazioni } from './views/Impostazioni'
-import { Informazioni } from './views/Informazioni'
-import { Libreria } from './views/Libreria'
-import { Pazienti } from './views/Pazienti'
-import { Report } from './views/Report'
-import { Simula } from './views/Simula'
-import { Teoria } from './views/Teoria'
+
+const Simula = lazy(() => import('./views/Simula').then((module) => ({ default: module.Simula })))
+const Catalogo = lazy(() => import('./views/Catalogo').then((module) => ({ default: module.Catalogo })))
+const Confronta = lazy(() => import('./views/Confronta').then((module) => ({ default: module.Confronta })))
+const Libreria = lazy(() => import('./views/Libreria').then((module) => ({ default: module.Libreria })))
+const Pazienti = lazy(() => import('./views/Pazienti').then((module) => ({ default: module.Pazienti })))
+const Teoria = lazy(() => import('./views/Teoria').then((module) => ({ default: module.Teoria })))
+const Report = lazy(() => import('./views/Report').then((module) => ({ default: module.Report })))
+const Impostazioni = lazy(() => import('./views/Impostazioni').then((module) => ({ default: module.Impostazioni })))
+const Informazioni = lazy(() => import('./views/Informazioni').then((module) => ({ default: module.Informazioni })))
 
 const NAV: { id: ViewId; label: string; icon: typeof Activity }[] = [
   { id: 'simula', label: 'Simula', icon: Activity },
@@ -79,30 +81,32 @@ export function App() {
         <Toolbar />
         <span style={{ flex: 1 }} />
         <span className="hair">{patient.alias}</span>
-        <button className="chip" onClick={() => patch({ unitMode: unit === 'si' ? 'conventional' : 'si' })}>
+        <button className="chip" aria-label="Cambia unità" onClick={() => patch({ unitMode: unit === 'si' ? 'conventional' : 'si' })}>
           {unit === 'si' ? 'SI' : 'ng/dL'}
         </button>
       </header>
-      {view === 'simula' ? <Simula /> : null}
-      {view === 'catalogo' ? <Catalogo /> : null}
-      {view === 'confronta' ? <Confronta /> : null}
-      {view === 'libreria' ? <Libreria /> : null}
-      {view === 'pazienti' ? <Pazienti /> : null}
-      {view === 'teoria' ? <Teoria /> : null}
-      {view === 'report' ? <Report /> : null}
-      {view === 'impostazioni' ? <Impostazioni /> : null}
-      {view === 'info' ? <Informazioni /> : null}
+      <Suspense fallback={<div className="view-loading" role="status">Caricamento vista…</div>}>
+        {view === 'simula' ? <Simula /> : null}
+        {view === 'catalogo' ? <Catalogo /> : null}
+        {view === 'confronta' ? <Confronta /> : null}
+        {view === 'libreria' ? <Libreria /> : null}
+        {view === 'pazienti' ? <Pazienti /> : null}
+        {view === 'teoria' ? <Teoria /> : null}
+        {view === 'report' ? <Report /> : null}
+        {view === 'impostazioni' ? <Impostazioni /> : null}
+        {view === 'info' ? <Informazioni /> : null}
+      </Suspense>
       <CommandPalette />
 
       {!settings.disclaimerAccepted ? (
         <div className="overlay">
-          <div className="palette" style={{ padding: 24, maxWidth: 560 }}>
+          <div className="palette" style={{ padding: 24, maxWidth: 560 }} role="dialog" aria-modal="true" aria-labelledby="disclaimer-title">
             <div className="hair">Prima di iniziare</div>
-            <h2 style={{ fontFamily: 'Source Serif 4', margin: '8px 0 12px' }}>Simulazione, non prescrizione</h2>
+            <h2 id="disclaimer-title" style={{ fontFamily: 'Source Serif 4', margin: '8px 0 12px' }}>Simulazione, non prescrizione</h2>
             <p style={{ color: '#c5cedb', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
               {DISCLAIMER.replace(/\*\*/g, '')}
             </p>
-            <button className="primary" style={{ marginTop: 16 }} onClick={accept}>
+            <button autoFocus className="primary" style={{ marginTop: 16 }} onClick={accept}>
               Ho capito, apri Kinetica
             </button>
           </div>

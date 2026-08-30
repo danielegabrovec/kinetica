@@ -4,7 +4,7 @@ import { saveText } from './export'
 
 export async function exportPlanToDisk(plan: SavedSimulation, patient?: PatientProfile) {
   const content = serializePlanFile(plan, patient)
-  return saveText(`${slugPlanName(plan.name)}.json`, content, '.json')
+  return saveText(`${slugPlanName(plan.name)}.json`, content, 'json')
 }
 
 export async function pickPlanFile(): Promise<string | null> {

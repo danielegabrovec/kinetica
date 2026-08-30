@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { getFormulation } from '@shared/catalog'
 import { simulate } from '@shared/engine/simulate'
 import { convert, formatConc, preferredUnit } from '@shared/engine/units'
+import { frequencyLabel } from '@shared/engine/schedule'
 import { resolveClusterStyle, simClusterLabel } from '@shared/sim-cluster'
 import { OverlayChart } from '../components/PkChart'
 import { useApp } from '../store/useApp'
@@ -56,8 +57,8 @@ export function Confronta() {
         {lines.map((l) => {
           const f = getFormulation(l.formulationId)
           return (
-            <button key={l.id} className="chip" onClick={() => duplicateLine(l.id)}>
-              Duplica {f?.name}
+            <button key={l.id} className="chip" onClick={() => duplicateLine(l.id)} aria-label={`Duplica ${f?.name ?? 'formulazione'}, ${l.dose} ${f?.doseUnit ?? ''}, ${frequencyLabel(l)}`}>
+              Duplica {f?.name} · {l.dose} {f?.doseUnit} · {frequencyLabel(l)}
             </button>
           )
         })}

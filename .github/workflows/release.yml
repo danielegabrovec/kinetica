@@ -7,30 +7,52 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   windows:
     runs-on: windows-latest
+    timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run dist
+      - name: Installa dipendenze bloccate
+        run: npm ci
+      - name: Esegui tutti i gate di pubblicazione
+        run: npm run verify
+      - name: Costruisci installer Windows x64
+        run: npm run dist
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - uses: actions/upload-artifact@v4
+      - name: Genera checksum SHA-256
+        run: npm run checksums
+      - name: Attesta la provenienza dell'installer
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: release/Kinetica-Setup-*.exe
+      - name: Conserva gli asset del workflow
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: kinetica-windows-setup
-          path: release/Kinetica-Setup-*.exe
+          if-no-files-found: error
+          path: |
+            release/Kinetica-Setup-*.exe
+            release/SHA256SUMS.txt
       - name: Pubblica sulla release GitHub
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
-          files: release/Kinetica-Setup-*.exe
-          generate_release_notes: true
-          draft: false
+          name: Kinetica ${{ github.ref_name }}
+          body_path: docs/RELEASE_NOTES_v1.2.0.md
+          files: |
+            release/Kinetica-Setup-*.exe
+            release/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          draft: true
+          prerelease: false

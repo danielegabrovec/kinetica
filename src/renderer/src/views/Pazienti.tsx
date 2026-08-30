@@ -103,11 +103,11 @@ export function Pazienti() {
       <h2 className="profile-editor-title">Profilo aperto</h2>
       <div className="field">
         <label>Alias</label>
-        <input value={patient.alias} onChange={(e) => patch({ alias: e.target.value })} />
+        <input aria-label="Alias profilo" maxLength={80} value={patient.alias} onChange={(e) => patch({ alias: e.target.value })} />
       </div>
       <div className="field">
         <label>Sesso (finestre default)</label>
-        <select value={patient.sex} onChange={(e) => patch({ sex: e.target.value as 'male' | 'female' })}>
+        <select aria-label="Sesso" value={patient.sex} onChange={(e) => patch({ sex: e.target.value as 'male' | 'female' })}>
           <option value="male">Maschile</option>
           <option value="female">Femminile</option>
         </select>
@@ -116,6 +116,9 @@ export function Pazienti() {
         <label>Peso (kg) — scala il Vd</label>
         <input
           type="number"
+          aria-label="Peso in kg"
+          min={30}
+          max={300}
           value={patient.weightKg}
           onChange={(e) => patch({ weightKg: Number(e.target.value) })}
         />
@@ -124,6 +127,9 @@ export function Pazienti() {
         <label>SHBG (nmol/L) — per T libero Vermeulen</label>
         <input
           type="number"
+          aria-label="SHBG"
+          min={0.1}
+          max={500}
           value={patient.shbgNmol ?? ''}
           onChange={(e) =>
             patch({ shbgNmol: e.target.value === '' ? undefined : Number(e.target.value) })
@@ -134,6 +140,9 @@ export function Pazienti() {
         <label>Albumina (g/dL)</label>
         <input
           type="number"
+          aria-label="Albumina"
+          min={1}
+          max={7}
           step="0.1"
           value={patient.albuminGdl ?? 4.3}
           onChange={(e) => patch({ albuminGdl: Number(e.target.value) })}

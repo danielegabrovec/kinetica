@@ -4,11 +4,13 @@ import { DISCLAIMER } from '@shared/catalog/theory'
 import { simulate } from '@shared/engine/simulate'
 import { frequencyLabel } from '@shared/engine/schedule'
 import { convert, formatConc, preferredUnit } from '@shared/engine/units'
+import { slugPlanName } from '@shared/library'
 import { resolveClusterStyle, simClusterLabel } from '@shared/sim-cluster'
 import type { ProtocolLine } from '@shared/types'
 import { overlayCsv, protocolHtml, saveText } from '../lib/export'
 import { OverlayChart, PkChart } from '../components/PkChart'
 import { useApp } from '../store/useApp'
+import { useFileUi } from '../store/useFileUi'
 
 export function Report() {
   const lines = useApp((s) => s.lines)
@@ -16,6 +18,8 @@ export function Report() {
   const patient = useApp((s) => s.patient)
   const horizonDays = useApp((s) => s.horizonDays)
   const settings = useApp((s) => s.settings)
+  const currentName = useApp((s) => s.currentName)
+  const flash = useFileUi((s) => s.flash)
 
   const blocks = useMemo(() => {
     return simClusters.map((c, i) => {
@@ -52,25 +56,40 @@ export function Report() {
     [blocks]
   )
 
+  const reportName = currentName && currentName !== 'Senza titolo' ? currentName : 'Report di simulazione'
+  const documentHtml = useMemo(
+    () => protocolHtml(blocks, patient, settings.unitMode, overlayGroups, reportName),
+    [blocks, patient, settings.unitMode, overlayGroups, reportName]
+  )
+  const fileStem = slugPlanName(reportName)
+
+  const run = async (action: () => Promise<{ ok: boolean }>, success: string) => {
+    try {
+      const result = await action()
+      if (result.ok) flash(success)
+    } catch (error) {
+      flash(error instanceof Error ? error.message : 'Operazione non riuscita.', 'err')
+    }
+  }
+
   const exportHtml = async () => {
-    const html = protocolHtml(blocks, patient, settings.unitMode, overlayGroups)
-    await saveText('kinetica-report.html', html, 'html')
+    await run(() => saveText(`${fileStem}-report.html`, documentHtml, 'html'), 'Report HTML esportato')
   }
   const exportCsv = async () => {
-    await saveText('kinetica-serie.csv', overlayCsv(overlayGroups, settings.unitMode), 'csv')
+    await run(() => saveText(`${fileStem}-serie.csv`, overlayCsv(overlayGroups, settings.unitMode), 'csv'), 'Serie CSV esportate')
   }
   const printDoc = async () => {
-    if (window.kinetica) await window.kinetica.print()
+    if (window.kinetica) await run(() => window.kinetica!.printReport(documentHtml), 'Documento inviato alla stampa')
     else window.print()
   }
   const pdf = async () => {
-    if (window.kinetica) await window.kinetica.pdf('kinetica-report.pdf')
+    if (window.kinetica) await run(() => window.kinetica!.pdfReport({ defaultName: `${fileStem}-report.pdf`, html: documentHtml }), 'Report PDF esportato')
     else window.print()
   }
 
   return (
     <section className="canvas" style={{ gridColumn: '2 / span 2', overflow: 'auto' }}>
-      <div className="no-print" style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div className="no-print report-actions">
         <button className="primary" onClick={exportHtml}>
           Esporta HTML
         </button>
@@ -81,12 +100,15 @@ export function Report() {
           Stampa
         </button>
         <button className="ghost" onClick={exportCsv}>
-          CSV
+          Esporta CSV
         </button>
       </div>
-      <h1 style={{ fontFamily: 'Source Serif 4', fontWeight: 600 }}>Report di simulazione</h1>
+      <h1 style={{ fontFamily: 'Source Serif 4', fontWeight: 600 }}>{reportName}</h1>
       <p className="hair">
         {patient.alias} · {patient.weightKg} kg · orizzonte {horizonDays} giorni
+      </p>
+      <p className="report-quality-note no-print">
+        HTML, PDF e stampa usano lo stesso documento A4 dedicato. Il CSV contiene le serie numeriche complete.
       </p>
       {overlayGroups.length >= 2 ? (
         <div style={{ margin: '16px 0 28px' }}>
@@ -104,7 +126,7 @@ export function Report() {
           <h2 style={{ fontSize: 16, marginBottom: 8 }}>{b.label}</h2>
           {b.lines.length ? (
             <>
-              <div style={{ height: 280, marginBottom: 8 }}>
+              <div className="report-chart-frame">
                 <PkChart result={b.result} lines={b.lines} paint={b} />
               </div>
               <table style={{ width: '100%', fontFamily: 'IBM Plex Mono', fontSize: 12, borderCollapse: 'collapse' }}>

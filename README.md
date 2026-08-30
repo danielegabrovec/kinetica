@@ -27,14 +27,26 @@ Il modello è a due costanti (Bateman / flip-flop per i depositi, infusione a or
 
 Dalla 1.1.0 i protocolli si organizzano in **cluster di simulazione** (curve indipendenti con colore e tratto propri) sovrapponibili sullo stesso grafico, con la serie **Δ** e il confronto Cavg/Cmax/Cmin tra Cluster 1 e Cluster 2.
 
+La 1.2.0 aggiunge persistenza robusta con recupero e backup, import validato, report A4 professionali, accessibilità da tastiera, hardening Electron e una catena di rilascio verificabile.
+
 **Tutto gira in locale:** nessun account, nessun cloud, nessun invio di dati.
 
 ## Installazione (Windows)
 
 1. Apri la pagina [Releases](https://github.com/danielegabrovec/kinetica/releases).
-2. Scarica `Kinetica-Setup-1.1.0.exe` (installer NSIS, 64 bit).
+2. Scarica `Kinetica-Setup-1.2.0.exe` e `SHA256SUMS.txt` (installer NSIS, 64 bit).
 3. Esegui il file e segui la procedura (lingua italiana, si può scegliere la cartella).
 4. All’avvio accetta l’avvertenza di simulazione.
+
+Per verificare il file scaricato:
+
+```powershell
+Get-FileHash .\Kinetica-Setup-1.2.0.exe -Algorithm SHA256
+Get-Content .\SHA256SUMS.txt
+gh attestation verify .\Kinetica-Setup-1.2.0.exe -R danielegabrovec/kinetica
+```
+
+Il primo hash deve coincidere con quello pubblicato. L’ultimo comando è opzionale e richiede la [GitHub CLI](https://cli.github.com/).
 
 ### SmartScreen
 
@@ -42,28 +54,31 @@ L’installer **non è firmato con un certificato Authenticode a pagamento**. Wi
 
 ### Disinstallazione
 
-Impostazioni Windows → App → Kinetica → Disinstalla. I JSON salvati restano in `%APPDATA%\kinetica` finché non li cancelli a mano.
+Impostazioni Windows → App → Kinetica → Disinstalla. I dati salvati restano in `%APPDATA%\Kinetica` finché non li cancelli a mano.
 
 Requisiti: Windows 10 o 11, 64 bit.
 
 ## Avvio da codice (sviluppo)
 
-Serve [Node.js](https://nodejs.org/) 20 o successivo.
+Serve [Node.js](https://nodejs.org/) 22 o successivo.
 
 ```powershell
 git clone https://github.com/danielegabrovec/kinetica.git
 cd kinetica
-npm install
-npm test
+npm ci
+npm run verify
 npm run dev
 ```
 
 | Comando | Cosa fa |
 |---|---|
 | `npm run dev` | App Electron in modalità sviluppo |
-| `npm test` | Suite Vitest del motore PK |
+| `npm test` | Suite Vitest del motore, import, persistenza ed export |
+| `npm run test:e2e` | Build e collaudo dell’app Electron reale con Playwright |
+| `npm run verify` | Typecheck, unit/integration, audit, build ed E2E |
 | `npm run build` | Bundle produzione in `out/` |
 | `npm run dist` | Bundle + installer NSIS in `release/` |
+| `npm run checksums` | Genera `release/SHA256SUMS.txt` |
 
 ## Come si usa
 
@@ -83,7 +98,7 @@ Layout da editor video:
 - **Trascina in verticale** (maniglia) per alzare/abbassare la dose. L’altezza della clip segue la dose.
 - **Cluster**: «Aggiungi cluster» crea un secondo gruppo di molecole con la sua curva; «Sovrapponi» le confronta sullo stesso grafico con la serie Δ.
 - **Salva** (Ctrl+S), **Salva con nome** (Ctrl+Shift+S, mai sovrascrive), **Carica** (Ctrl+O), **Nuovo** (Ctrl+N). Il nome del protocollo si cambia cliccandolo in alto.
-- **File**: elenco dei piani salvati con rinomina, duplica, elimina, **Importa/Esporta JSON** per passare un piano a un altro computer. Tutto sta in `%APPDATA%\kinetica`.
+- **File**: elenco dei piani salvati con rinomina, duplica, elimina, **Importa/Esporta JSON** per passare un piano a un altro computer. Tutto sta in `%APPDATA%\Kinetica`.
 - **Profili**: alias locali con peso, SHBG, albumina; il cambio profilo salva quello aperto.
 - **Export:** HTML, PDF, stampa, CSV dalla sezione Report.
 
@@ -103,21 +118,22 @@ I parametri vivono in `src/shared/catalog/formulations.ts`. Evidenza **C** = ill
 
 ## Dati e privacy
 
-Nessun telemetria, nessun account, nessuna rete richiesta dopo l’installazione (il renderer carica i font da Google Fonts se c’è connessione; l’app funziona comunque).
+Nessuna telemetria, nessun account e nessuna rete richiesta dopo l’installazione. Anche i font sono inclusi localmente.
 
-Persistenza: `%APPDATA%\kinetica\library.json`.
+Persistenza: `%APPDATA%\Kinetica\library.json`. Le scritture sono atomiche; prima di aggiornare l’archivio viene conservato un backup. Se il JSON non è leggibile, Kinetica ne crea una copia `library.recovery-*.json`, riparte in sicurezza e mostra un avviso. Gli archivi delle versioni future non vengono modificati.
 
 ## Compilare l’installer
 
 Da Windows, nella cartella del repo:
 
 ```powershell
-npm install
-npm test
+npm ci
+npm run verify
 npm run dist
+npm run checksums
 ```
 
-L’eseguibile esce in `release\Kinetica-Setup-1.1.0.exe`.
+L’eseguibile esce in `release\Kinetica-Setup-1.2.0.exe` con il relativo `release\SHA256SUMS.txt`.
 
 ## Struttura
 
@@ -127,7 +143,8 @@ src/preload       bridge IPC
 src/renderer      UI React
 src/shared/engine motore PK (Bateman, superposition, metriche)
 src/shared/catalog formulazioni, frequenze, preset, testi
-tests             Vitest
+tests             Vitest + collaudi E2E Electron
+scripts           bootstrap Electron e checksum release
 build             icona e risorse installer
 ```
 
